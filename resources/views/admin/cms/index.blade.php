@@ -1417,7 +1417,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div class="p-6 rounded-2xl bg-white border border-slate-200 space-y-3">
                         <h4 class="font-extrabold text-slate-900 text-sm">Applications Report</h4>
                         <p class="text-xs text-slate-500">Complete listing of student applicants and status.</p>
@@ -1468,6 +1468,23 @@
                             </a>
                             <a :href="getReportUrl('admitted', 'csv')" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
                                 Export Admitted List &rarr;
+                            </a>
+                            @else
+                            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                                <span class="text-xs font-bold text-slate-400 block">🔒 Downloads Disabled</span>
+                                <span class="text-[9px] text-slate-400 mt-1 block">Requires download permission</span>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="p-6 rounded-2xl bg-white border border-slate-200 space-y-3">
+                        <h4 class="font-extrabold text-slate-900 text-sm">Admissions Report</h4>
+                        <p class="text-xs text-slate-500">Admissions statistics, demographics and payments.</p>
+                        <div class="space-y-2">
+                            @if(auth()->user()->hasPermissionTo('download_reports'))
+                            <a :href="getReportUrl('admissions_report', 'pdf')" target="_blank" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
+                                📄 Download PDF Report (With Logo)
                             </a>
                             @else
                             <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">

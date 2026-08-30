@@ -1385,7 +1385,175 @@ class AdminWebController extends Controller
                 'total_records' => $records->count(),
                 'degree_count' => $degreeCount,
             ];
+        } elseif ($type === 'admissions_report') {
+            // Calculate the date range for the custom period or academic year
+            $startDate = null;
+            $endDate = null;
+            $reportPeriodText = 'All-Time';
+
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                $startDate = \Illuminate\Support\Carbon::parse($request->get('start_date'))->startOfDay();
+                $endDate = \Illuminate\Support\Carbon::parse($request->get('end_date'))->endOfDay();
+                $reportPeriodText = 'Custom (' . $startDate->format('Y-m-d') . ' to ' . $endDate->format('Y-m-d') . ')';
+            } elseif ($request->filled('year') && $request->filled('month')) {
+                $year = $request->get('year');
+                $month = $request->get('month');
+                $startDate = \Illuminate\Support\Carbon::create($year, $month, 1)->startOfDay();
+                $endDate = \Illuminate\Support\Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+                $reportPeriodText = 'Custom (' . $startDate->format('Y-m-d') . ' to ' . $endDate->format('Y-m-d') . ')';
+            } elseif ($request->filled('year')) {
+                $year = $request->get('year');
+                $startDate = \Illuminate\Support\Carbon::create($year, 1, 1)->startOfDay();
+                $endDate = \Illuminate\Support\Carbon::create($year, 12, 31)->endOfDay();
+                $reportPeriodText = 'Academic Year ' . $year;
+            }
+
+            // If no range is specified, default to today
+            if (!$startDate || !$endDate) {
+                $startDate = \Illuminate\Support\Carbon::today()->startOfDay();
+                $endDate = \Illuminate\Support\Carbon::today()->endOfDay();
+                $reportPeriodText = 'Custom (' . $startDate->format('Y-m-d') . ' to ' . $endDate->format('Y-m-d') . ')';
+            }
+
+            // Date metadata
+            $now = now();
+            $generationDay = $now->format('l'); // e.g. Tuesday
+            $generationDate = $now->format('d F Y'); // e.g. 25 August 2026
+            $generationDateFormatted = $now->format('F d, Y'); // e.g. August 25, 2026
+            $generationTime = $now->format('h:i A'); // e.g. 11:12 AM
+
+            // Calculate KPIs
+            $previousTotal = Application::where('created_at', '<', $startDate)->count();
+            $newTotal = Application::whereBetween('created_at', [$startDate, $endDate])->count();
+            $totalApplications = $previousTotal + $newTotal;
+
+            $pendingTotal = Application::whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist'])
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->count();
+
+            $kpis = [
+                'previous_total' => $previousTotal,
+                'new_total' => $newTotal,
+                'total_applications' => $totalApplications,
+                'pending_total' => $pendingTotal,
+            ];
+
+            // 1. Top Enrolled Programs
+            $topProgramsRaw = Application::whereBetween('created_at', [$startDate, $endDate])
+                ->select('programme_id', \Illuminate\Support\Facades\DB::raw('count(id) as enrolled_count'))
+                ->groupBy('programme_id')
+                ->orderBy('enrolled_count', 'desc')
+                ->get();
+
+            $topPrograms = [];
+            $topProgramsTotal = 0;
+            foreach ($topProgramsRaw as $item) {
+                if ($item->programme) {
+                    $topPrograms[] = [
+                        'name' => $item->programme->name,
+                        'count' => $item->enrolled_count,
+                    ];
+                    $topProgramsTotal += $item->enrolled_count;
+                }
+            }
+
+            // 2. Regional Performance
+            $regionalRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+                ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->select('applicants.region', \Illuminate\Support\Facades\DB::raw('count(applications.id) as count'))
+                ->groupBy('applicants.region')
+                ->orderBy('count', 'desc')
+                ->get();
+
+            $regionalPerformance = [];
+            foreach ($regionalRaw as $item) {
+                $regionName = $item->region ? trim($item->region) : 'Unknown Region';
+                $percentage = $newTotal > 0 ? round(($item->count / $newTotal) * 100, 1) : 0;
+                $regionalPerformance[] = [
+                    'name' => $regionName,
+                    'count' => $item->count,
+                    'percentage' => $percentage,
+                ];
+            }
+
+            // 3. All Districts
+            $districtsRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+                ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->select('applicants.district', \Illuminate\Support\Facades\DB::raw('count(applications.id) as count'))
+                ->groupBy('applicants.district')
+                ->orderBy('count', 'desc')
+                ->get();
+
+            $districtsPerformance = [];
+            foreach ($districtsRaw as $item) {
+                $districtName = $item->district ? trim($item->district) : 'Unknown District';
+                $districtsPerformance[] = [
+                    'name' => $districtName,
+                    'count' => $item->count,
+                ];
+            }
+
+            // 4. Wards with Admissions
+            $wardsRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+                ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->select('applicants.ward', \Illuminate\Support\Facades\DB::raw('count(applications.id) as count'))
+                ->groupBy('applicants.ward')
+                ->orderBy('count', 'desc')
+                ->get();
+
+            $wardsPerformance = [];
+            foreach ($wardsRaw as $item) {
+                $wardName = $item->ward ? trim($item->ward) : 'Unknown Ward';
+                $wardsPerformance[] = [
+                    'name' => $wardName,
+                    'count' => $item->count,
+                ];
+            }
+
+            // 5. Top 20 Fee Payment Rates
+            $ratesRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+                ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->leftJoin('payments', 'applications.id', '=', 'payments.application_id')
+                ->select(
+                    'applicants.region',
+                    \Illuminate\Support\Facades\DB::raw('count(applications.id) as enrolled'),
+                    \Illuminate\Support\Facades\DB::raw("sum(case when payments.payment_status = 'paid' then 1 else 0 end) as paid")
+                )
+                ->groupBy('applicants.region')
+                ->get();
+
+            $paymentRates = [];
+            foreach ($ratesRaw as $item) {
+                $regionName = $item->region ? trim($item->region) : 'Unknown Region';
+                $enrolled = (int) $item->enrolled;
+                $paid = (int) $item->paid;
+                $percentage = $enrolled > 0 ? round(($paid / $enrolled) * 100, 1) : 0;
+                
+                $paymentRates[] = [
+                    'name' => $regionName,
+                    'enrolled' => $enrolled,
+                    'paid' => $paid,
+                    'percentage' => $percentage,
+                ];
+            }
+
+            // Sort payment rates by percentage desc, then enrolled desc, and take top 20
+            usort($paymentRates, function ($a, $b) {
+                if ($b['percentage'] != $a['percentage']) {
+                    return $b['percentage'] <=> $a['percentage'];
+                }
+                return $b['enrolled'] <=> $a['enrolled'];
+            });
+            $paymentRates = array_slice($paymentRates, 0, 20);
+
+            return view('pdf.admissions-report-pdf', compact(
+                'refNumber', 'logos', 'generationDay', 'generationDate', 
+                'generationDateFormatted', 'generationTime', 'reportPeriodText', 
+                'kpis', 'topPrograms', 'topProgramsTotal', 'regionalPerformance', 
+                'districtsPerformance', 'wardsPerformance', 'paymentRates'
+            ));
         }
+
         return view('pdf.reports-pdf', compact('type', 'reportTitle', 'records', 'metrics', 'logos', 'generatedAt', 'refNumber'));
     }
 
