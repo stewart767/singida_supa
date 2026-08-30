@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admissions Report - {{ $refNumber }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        *, *:before, *:after {
+            box-sizing: border-box;
+        }
         @page {
             size: A4 portrait;
             margin: 15mm 15mm 20mm 15mm;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'DejaVu Sans';
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'DejaVu Sans';
             font-size: 11px;
             color: #1e293b;
             line-height: 1.5;
@@ -20,6 +26,7 @@
         }
         .container {
             max-width: 900px;
+            width: 100%;
             margin: 0 auto;
             position: relative;
         }
@@ -60,9 +67,7 @@
         .header-table {
             width: 100%;
             border-collapse: collapse;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         .header-table td {
             border: none;
@@ -104,16 +109,18 @@
             color: #0f172a;
             margin: 0;
         }
+        .header-subtitle-wrapper {
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 4px;
+            margin-top: 4px;
+        }
         .header-subtitle {
             font-size: 11px;
             font-weight: 800;
             color: #2563eb;
             letter-spacing: 0.5px;
             text-transform: uppercase;
-            margin: 4px 0 0 0;
-            border-bottom: 2px solid #2563eb;
-            display: inline-block;
-            padding-bottom: 2px;
+            margin: 0;
         }
         
         /* Report parameters details */
@@ -245,13 +252,20 @@
             }
             body {
                 background: #fff;
+                margin: 0;
+                padding: 0;
             }
             .container {
                 max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0;
             }
             .footer {
                 position: fixed;
-                bottom: -10mm;
+                bottom: -15mm;
+                left: 0;
+                right: 0;
             }
         }
     </style>
@@ -285,7 +299,9 @@
                 </td>
                 <td class="title-cell">
                     <h1 class="header-title">{{ \App\Models\Setting::get('university_name', "Singida Teachers Training College") }}</h1>
-                    <h2 class="header-subtitle">Admissions Report</h2>
+                    <div class="header-subtitle-wrapper">
+                        <h2 class="header-subtitle">Admissions Report</h2>
+                    </div>
                 </td>
                 <td class="meta-cell">
                     <strong>Date:</strong> {{ $generationDateFormatted }}<br>
