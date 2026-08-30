@@ -27,6 +27,7 @@ class AdminPermissionMiddleware
 
                 case 'applications':
                 case 'showApplication':
+                case 'storeApplication':
                     abort_unless($user->hasPermissionTo('manage_applications')
                         || $user->hasPermissionTo('verify_documents')
                         || $user->hasPermissionTo('make_admission_decisions'), 403);

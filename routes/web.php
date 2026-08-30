@@ -105,6 +105,7 @@ Route::middleware(['auth'])->prefix('applicant')->group(function () {
 Route::middleware(['auth', \App\Http\Middleware\AdminPermissionMiddleware::class])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminWebController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/applications', [AdminWebController::class, 'applications'])->name('admin.applications.index');
+    Route::post('/applications', [AdminWebController::class, 'storeApplication'])->name('admin.applications.store');
     Route::get('/applications/{application}', [AdminWebController::class, 'showApplication'])->name('admin.applications.show');
     Route::get('/payments', [AdminWebController::class, 'payments'])->name('admin.payments.index');
     Route::get('/programmes', [AdminWebController::class, 'programmes'])->name('admin.programmes.index');

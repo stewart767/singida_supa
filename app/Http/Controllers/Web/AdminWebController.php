@@ -40,6 +40,8 @@ class AdminWebController extends Controller
         $applications = $this->applicationRepo->getFilteredApplications($filters);
 
         $programmes = Programme::orderBy('name')->get();
+        $academicYears = \App\Models\AcademicYear::where('is_active', true)->get();
+        $intakes = \App\Models\Intake::where('is_active', true)->get();
 
         $stats = [
             'total' => Application::count(),
@@ -48,7 +50,7 @@ class AdminWebController extends Controller
             'rejected' => Application::where('status', 'Rejected')->count(),
         ];
 
-        return view('admin.applications.index', compact('applications', 'filters', 'programmes', 'stats'));
+        return view('admin.applications.index', compact('applications', 'filters', 'programmes', 'academicYears', 'intakes', 'stats'));
     }
 
     public function showApplication(Application $application)
@@ -57,6 +59,114 @@ class AdminWebController extends Controller
             $q->orderBy('created_at', 'desc');
         }]);
         return view('admin.applications.show', compact('application'));
+    }
+    
+    public function storeApplication(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'programme_id' => ['required', 'exists:programmes,id'],
+            'academic_year_id' => ['required', 'exists:academic_years,id'],
+            'intake_id' => ['required', 'exists:intakes,id'],
+            'admission_type' => ['required', 'string', 'in:Diploma,Form Six'],
+            'admission_category' => ['required', 'string', 'in:Direct Entry,Foundation'],
+            'status' => ['required', 'string', 'in:Draft,Pending Payment,Under Review,Verified,Approved,Rejected,Waitlist'],
+            'gender' => ['required', 'string', 'in:male,female,other'],
+            'date_of_birth' => ['required', 'date'],
+        ]);
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $request) {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'role' => 'applicant',
+                'is_active' => true,
+                'password' => Hash::make('Password123!'),
+                'email_verified_at' => now(),
+            ]);
+
+            $applicantRole = \App\Models\Role::where('name', 'applicant')->first();
+            if ($applicantRole) {
+                $user->roles()->sync([$applicantRole->id]);
+            }
+
+            $applicant = \App\Models\Applicant::create([
+                'user_id' => $user->id,
+                'gender' => $validated['gender'],
+                'date_of_birth' => $validated['date_of_birth'],
+                'whatsapp_number' => $validated['phone'],
+            ]);
+
+            $year = date('Y');
+            $count = Application::whereYear('created_at', $year)->count() + 1;
+            $appNumber = 'SUPA-' . $year . '-' . str_pad((string) $count, 6, '0', STR_PAD_LEFT);
+
+            $application = Application::create([
+                'application_number' => $appNumber,
+                'applicant_id' => $applicant->id,
+                'programme_id' => $validated['programme_id'],
+                'academic_year_id' => $validated['academic_year_id'],
+                'intake_id' => $validated['intake_id'],
+                'admission_type' => $validated['admission_type'],
+                'admission_category' => $validated['admission_category'],
+                'status' => $validated['status'],
+                'submitted_at' => now(),
+            ]);
+
+            // Create default academic profile
+            \App\Models\AcademicProfile::create([
+                'application_id' => $application->id,
+                'admission_type' => $validated['admission_type'],
+                'acsee_school' => 'OUT Academic Center',
+                'acsee_combination' => 'N/A',
+                'acsee_points' => 0.0,
+                'acsee_number' => 'S' . str_pad((string) rand(1, 9999), 4, '0', STR_PAD_LEFT) . '/' . str_pad((string) rand(1, 9999), 4, '0', STR_PAD_LEFT) . '/' . date('Y', strtotime('-1 year')),
+            ]);
+
+            // Create default payment
+            \App\Models\Payment::create([
+                'application_id' => $application->id,
+                'control_number' => '99' . str_pad((string) rand(1, 9999999999), 10, '0', STR_PAD_LEFT),
+                'amount' => (float) Setting::get('application_fee_default', 20000),
+                'payment_status' => $validated['status'] === 'Approved' ? 'paid' : 'unpaid',
+            ]);
+
+            if ($validated['status'] === 'Approved') {
+                $seqNumber = str_pad((string) (\App\Models\AdmissionLetter::count() + 1), 4, '0', STR_PAD_LEFT);
+                $admNumber = 'SUPA/ADM/' . date('Y') . '/' . $seqNumber;
+                $verificationCode = strtoupper(Str::random(16));
+
+                \App\Models\AdmissionLetter::create([
+                    'application_id' => $application->id,
+                    'admission_number' => $admNumber,
+                    'verification_code' => $verificationCode,
+                    'qr_code_hash' => hash('sha256', $admNumber . '|' . $verificationCode),
+                    'reporting_date' => now()->addMonths(1),
+                    'generated_by' => auth()->id(),
+                    'generated_at' => now(),
+                ]);
+            }
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'Admission Created',
+                'description' => "Manually created admission for applicant '{$user->name}' ({$user->email}) with application number '{$appNumber}'",
+                'ip_address' => $request->ip()
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Admission for '{$user->name}' created successfully!",
+                    'application' => $application
+                ]);
+            }
+
+            return redirect()->route('admin.applications.index')->with('success', "Admission for '{$user->name}' created successfully.");
+        });
     }
 
     public function payments(Request $request)

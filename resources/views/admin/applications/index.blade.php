@@ -5,6 +5,21 @@
         selectedApps: [],
         selectAll: false,
         bulkLoading: false,
+        showAddStudentModal: false,
+        addStudentLoading: false,
+        newStudent: {
+            name: '',
+            email: '',
+            phone: '',
+            programme_id: '',
+            academic_year_id: '',
+            intake_id: '',
+            admission_type: 'Form Six',
+            admission_category: 'Direct Entry',
+            status: 'Approved',
+            gender: 'male',
+            date_of_birth: ''
+        },
 
         toggleSelectAll() {
             this.selectAll = !this.selectAll;
@@ -36,6 +51,25 @@
             .catch(err => {
                 this.bulkLoading = false;
                 toast(err.response?.data?.message || 'Error processing bulk approval', 'error');
+            });
+        },
+
+        addStudent() {
+            if (!this.newStudent.name || !this.newStudent.email || !this.newStudent.phone || !this.newStudent.programme_id || !this.newStudent.academic_year_id || !this.newStudent.intake_id || !this.newStudent.date_of_birth) {
+                toast('Please fill out all required fields.', 'error');
+                return;
+            }
+            this.addStudentLoading = true;
+            axios.post('{{ route('admin.applications.store') }}', this.newStudent)
+            .then(res => {
+                this.addStudentLoading = false;
+                this.showAddStudentModal = false;
+                toast(res.data.message || 'Student added successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            })
+            .catch(err => {
+                this.addStudentLoading = false;
+                toast(err.response?.data?.message || 'Error adding student', 'error');
             });
         }
     }">
@@ -134,6 +168,10 @@
                             class="px-5 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-md flex items-center gap-2">
                         <span x-show="!bulkLoading">✓ Bulk Approve Selected (<span x-text="selectedApps.length"></span>)</span>
                         <span x-show="bulkLoading">Approving...</span>
+                    </button>
+                    <button type="button" @click="showAddStudentModal = true" 
+                            class="px-5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs shadow-md flex items-center gap-2">
+                        + Add Student
                     </button>
                 </div>
 
@@ -247,6 +285,111 @@
 
             <div class="mt-6">
                 {{ $applications->withQueryString()->links() }}
+            </div>
+        </div>
+
+        <!-- MODAL: ADD STUDENT ADMISSION -->
+        <div x-show="showAddStudentModal" class="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+            <div class="bg-white max-w-lg w-full p-8 rounded-3xl shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-xl font-extrabold text-slate-900">Add Student Admission</h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Student Full Name *</label>
+                        <input type="text" x-model="newStudent.name" placeholder="e.g. John Doe" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Email Address *</label>
+                        <input type="email" x-model="newStudent.email" placeholder="john.doe@example.com" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Phone Number *</label>
+                        <input type="text" x-model="newStudent.phone" placeholder="e.g. 0754123456" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Gender *</label>
+                        <select x-model="newStudent.gender" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Date of Birth *</label>
+                        <input type="date" x-model="newStudent.date_of_birth" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Programme *</label>
+                        <select x-model="newStudent.programme_id" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="">Select Programme</option>
+                            @foreach($programmes as $p)
+                                <option value="{{ $p->id }}">{{ $p->code }} - {{ $p->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Academic Year *</label>
+                        <select x-model="newStudent.academic_year_id" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="">Select Academic Year</option>
+                            @foreach($academicYears as $y)
+                                <option value="{{ $y->id }}">{{ $y->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Intake *</label>
+                        <select x-model="newStudent.intake_id" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="">Select Intake</option>
+                            @foreach($intakes as $intake)
+                                <option value="{{ $intake->id }}">{{ $intake->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Admission Type *</label>
+                        <select x-model="newStudent.admission_type" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="Form Six">Form Six</option>
+                            <option value="Diploma">Diploma</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Admission Category *</label>
+                        <select x-model="newStudent.admission_category" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="Direct Entry">Direct Entry</option>
+                            <option value="Foundation">Foundation</option>
+                        </select>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Admission Status *</label>
+                        <select x-model="newStudent.status" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="Draft">Draft</option>
+                            <option value="Pending Payment">Pending Payment</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Verified">Verified</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Waitlist">Waitlist</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                    <button @click="showAddStudentModal = false" :disabled="addStudentLoading" class="px-5 py-2.5 rounded-2xl bg-slate-200 text-xs font-extrabold hover:bg-slate-300 transition-colors">Cancel</button>
+                    <button @click="addStudent()" :disabled="addStudentLoading" class="gradient-btn px-6 py-2.5 rounded-2xl text-white font-extrabold text-xs shadow-md flex items-center gap-2">
+                        <span x-show="!addStudentLoading">Create Admission</span>
+                        <span x-show="addStudentLoading">Creating...</span>
+                    </button>
+                </div>
             </div>
         </div>
 

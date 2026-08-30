@@ -22,7 +22,7 @@ class NewsSearchTest extends TestCase
         $this->seed();
 
         // Create admin user for testing
-        $adminRole = Role::where('name', 'administrator')->first();
+        $adminRole = Role::where('name', 'super_admin')->first();
         $this->adminUser = User::factory()->create();
         if ($adminRole) {
             $this->adminUser->roles()->attach($adminRole);

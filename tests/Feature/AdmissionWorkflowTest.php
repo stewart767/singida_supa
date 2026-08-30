@@ -564,5 +564,50 @@ class AdmissionWorkflowTest extends TestCase
             'acsee_subject3' => 'Accountancy',
         ]);
     }
+
+    public function test_admin_can_manually_add_student_admission()
+    {
+        $adminUser = User::where('role', 'super_admin')->first();
+        $this->actingAs($adminUser);
+
+        $programme = Programme::where('code', 'BAED')->first();
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+
+        $response = $this->postJson(route('admin.applications.store'), [
+            'name' => 'Test Student Manual',
+            'email' => 'manual.student.test@supa.ac.tz',
+            'phone' => '+255755999999',
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+            'status' => 'Approved',
+            'gender' => 'female',
+            'date_of_birth' => '2002-04-10',
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'manual.student.test@supa.ac.tz',
+            'role' => 'applicant',
+        ]);
+
+        $user = User::where('email', 'manual.student.test@supa.ac.tz')->first();
+        $this->assertNotNull($user->applicant);
+
+        $this->assertDatabaseHas('applications', [
+            'applicant_id' => $user->applicant->id,
+            'programme_id' => $programme->id,
+            'status' => 'Approved',
+        ]);
+
+        // Assert admission letter was automatically generated since status is Approved
+        $application = \App\Models\Application::where('applicant_id', $user->applicant->id)->first();
+        $this->assertNotNull($application->admissionLetter);
+    }
 }
 
