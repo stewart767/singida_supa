@@ -1,9 +1,11 @@
-<x-app-layout title="Payment Verification & Control Numbers Desk">
-    <x-slot name="header">Finance & Government Control Numbers Desk (CRUD)</x-slot>
+<x-app-layout title="{{ request()->get('view') === 'control_numbers' ? 'Government Control Numbers Desk' : 'Payment Verification & Control Numbers Desk' }}">
+    <x-slot name="header">
+        {{ request()->get('view') === 'control_numbers' ? 'Government Control Numbers Desk' : 'Finance & Government Control Numbers Desk (CRUD)' }}
+    </x-slot>
 
     <div class="w-full space-y-8" x-data="{
-        search: '',
-        statusFilter: '',
+        search: '{{ $filters['search'] ?? '' }}',
+        statusFilter: '{{ $filters['status'] ?? '' }}',
         showCreateModal: false,
         showEditModal: false,
         showDeleteModal: false,
@@ -121,25 +123,39 @@
     }">
         
         <!-- Controls & Filters Bar -->
-        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+        <form method="GET" action="{{ route('admin.payments.index') }}" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+            @if(request()->has('view'))
+                <input type="hidden" name="view" value="{{ request()->get('view') }}">
+            @endif
+
             <div class="flex items-center space-x-3 w-full sm:w-auto">
-                <input type="text" x-model="search" placeholder="Search Control # or Name..." 
+                <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search Control # or Name..." 
                        class="px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500 w-full sm:w-64">
                 
-                <select x-model="statusFilter" class="px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500">
+                <select name="status" onchange="this.form.submit()" class="px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500">
                     <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="pending" {{ ($filters['status'] ?? '') === 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="paid" {{ ($filters['status'] ?? '') === 'paid' ? 'selected' : '' }}>Paid</option>
+                    <option value="cancelled" {{ ($filters['status'] ?? '') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                 </select>
+
+                <button type="submit" class="gradient-btn px-5 py-3 rounded-2xl text-white font-extrabold text-xs shadow-md">
+                    Filter
+                </button>
+
+                @if(!empty(array_filter($filters ?? [])))
+                    <a href="{{ route('admin.payments.index') }}{{ request()->has('view') ? '?view=' . request()->get('view') : '' }}" class="px-4 py-3 rounded-2xl bg-slate-200 text-slate-800 font-extrabold text-xs hover:bg-slate-300 transition-colors">
+                        Reset
+                    </a>
+                @endif
             </div>
 
             <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
-                <button @click="showCreateModal = true" class="gradient-btn-gold px-6 py-3 rounded-2xl text-slate-950 font-black text-xs shadow-md hover:scale-105 transition-transform flex items-center gap-2">
+                <button type="button" @click="showCreateModal = true" class="gradient-btn-gold px-6 py-3 rounded-2xl text-slate-950 font-black text-xs shadow-md hover:scale-105 transition-transform flex items-center gap-2">
                     <span>+ Generate Control Number</span>
                 </button>
             </div>
-        </div>
+        </form>
 
         <!-- Payments Data Table -->
         <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 overflow-x-auto">
@@ -186,6 +202,11 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination Links -->
+        <div class="pt-4">
+            {{ $payments->appends(request()->query())->links() }}
         </div>
 
         <!-- GENERATE CONTROL NUMBER MODAL -->

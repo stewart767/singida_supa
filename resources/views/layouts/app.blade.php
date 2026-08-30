@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ sidebarOpen: false, userDropdown: false, recruitmentOpen: {{ request()->routeIs('admin.recruitment.*') ? 'true' : 'false' }} }">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ 
+    sidebarOpen: false, 
+    userDropdown: false, 
+    recruitmentOpen: {{ request()->routeIs('admin.recruitment.*') ? 'true' : 'false' }},
+    admissionsOpen: {{ request()->routeIs('admin.applications.*') ? 'true' : 'false' }},
+    paymentsOpen: {{ (request()->routeIs('admin.payments.*') && request()->get('view') !== 'control_numbers') ? 'true' : 'false' }},
+    controlsOpen: {{ (request()->routeIs('admin.payments.*') && request()->get('view') === 'control_numbers') ? 'true' : 'false' }}
+}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -151,6 +158,7 @@
                     </div>
                 @else
                     <!-- EXECUTIVE OVERVIEW -->
+                    @if(auth()->user()->hasPermissionTo('view_dashboard'))
                     <div class="space-y-1">
                         <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3">Overview</span>
                         <a href="{{ route('admin.dashboard') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('admin.dashboard') ? 'bg-blue-800 text-white' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
@@ -158,23 +166,89 @@
                             Executive Dashboard
                         </a>
                     </div>
+                    @endif
 
                     <!-- ADMISSION & APPLICANTS -->
+                    @if(auth()->user()->hasPermissionTo('manage_applications') || auth()->user()->hasPermissionTo('verify_documents') || auth()->user()->hasPermissionTo('make_admission_decisions') || auth()->user()->hasPermissionTo('verify_payments'))
                     <div class="space-y-1">
                         <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3">Admissions & Finance</span>
-                        <a href="{{ route('admin.applications.index') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('admin.applications.*') && request()->get('view') !== 'applicants' ? 'bg-blue-800 text-white' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
-                            <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            Admissions Desk
-                        </a>
-                        <a href="{{ route('admin.applications.index') }}?view=applicants" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->get('view') === 'applicants' ? 'bg-blue-800 text-white' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
-                            <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                            Applicants Directory
-                        </a>
-                        <a href="{{ route('admin.payments.index') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('admin.payments.*') ? 'bg-blue-800 text-white' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
-                            <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            Finance & Control Numbers
-                        </a>
+                        
+                        <!-- Admissions Desk Dropdown -->
+                        @if(auth()->user()->hasPermissionTo('manage_applications') || auth()->user()->hasPermissionTo('verify_documents') || auth()->user()->hasPermissionTo('make_admission_decisions'))
+                        <div>
+                            <button @click="admissionsOpen = !admissionsOpen" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-50 text-slate-600 hover:text-blue-800">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-3 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    Admissions Desk
+                                </span>
+                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="{ 'rotate-180': admissionsOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            
+                            <div x-show="admissionsOpen" x-transition class="pl-4 space-y-1" x-cloak>
+                                <a href="{{ route('admin.applications.index') }}" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.applications.index') && empty(request()->get('status')) ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    All Admissions
+                                </a>
+                                <a href="{{ route('admin.applications.index') }}?status=Approved" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->get('status') === 'Approved' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Active Admissions
+                                </a>
+                                <a href="{{ route('admin.applications.index') }}?status=Pending" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->get('status') === 'Pending' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Pending Admissions
+                                </a>
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- Payments Desk Dropdown -->
+                        @if(auth()->user()->hasPermissionTo('verify_payments'))
+                        <div>
+                            <button @click="paymentsOpen = !paymentsOpen" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-50 text-slate-600 hover:text-blue-800">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-3 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                    Payments Desk
+                                </span>
+                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="{ 'rotate-180': paymentsOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            
+                            <div x-show="paymentsOpen" x-transition class="pl-4 space-y-1" x-cloak>
+                                <a href="{{ route('admin.payments.index') }}" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && empty(request()->get('status')) && request()->get('view') !== 'control_numbers' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    All Payments
+                                </a>
+                                <a href="{{ route('admin.payments.index') }}?status=paid" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('status') === 'paid' && request()->get('view') !== 'control_numbers' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Active Payments
+                                </a>
+                                <a href="{{ route('admin.payments.index') }}?status=pending" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('status') === 'pending' && request()->get('view') !== 'control_numbers' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Pending Payments
+                                </a>
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- Control Numbers Dropdown -->
+                        @if(auth()->user()->hasPermissionTo('verify_payments'))
+                        <div>
+                            <button @click="controlsOpen = !controlsOpen" class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-50 text-slate-600 hover:text-blue-800">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-3 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2-2V7m10 12h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                    Control Numbers
+                                </span>
+                                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="{ 'rotate-180': controlsOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            
+                            <div x-show="controlsOpen" x-transition class="pl-4 space-y-1" x-cloak>
+                                <a href="{{ route('admin.payments.index') }}?view=control_numbers" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('view') === 'control_numbers' && empty(request()->get('status')) ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    All Control Numbers
+                                </a>
+                                <a href="{{ route('admin.payments.index') }}?view=control_numbers&status=paid" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('view') === 'control_numbers' && request()->get('status') === 'paid' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Active / Paid
+                                </a>
+                                <a href="{{ route('admin.payments.index') }}?view=control_numbers&status=pending" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('view') === 'control_numbers' && request()->get('status') === 'pending' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Pending / Unpaid
+                                </a>
+                            </div>
+                        </div>
+                        @endif
                     </div>
+                    @endif
 
                     <!-- RECRUITMENT & ATS -->
                     @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRole(['hr_director', 'hr_manager', 'hr_officer', 'interview_panel', 'designation_head']))
@@ -219,38 +293,54 @@
                     @endif
 
                     <!-- ACADEMICS & CONTENT -->
+                    @if(auth()->user()->hasPermissionTo('manage_programmes') || auth()->user()->hasPermissionTo('manage_settings'))
                     <div class="space-y-1">
                         <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3">Academics & CMS</span>
+                        @if(auth()->user()->hasPermissionTo('manage_programmes'))
                         <a href="{{ route('admin.programmes.index') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('admin.programmes.*') ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
                             <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                             Academics Catalog
                         </a>
+                        @endif
+                        @if(auth()->user()->hasPermissionTo('manage_settings'))
                         <a href="{{ route('admin.cms.index') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('admin.cms.*') ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
                             <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
                             Website CMS & Media
                         </a>
+                        @endif
                     </div>
+                    @endif
 
                     <!-- SYSTEM & REPORTS -->
+                    @if(auth()->user()->hasPermissionTo('manage_settings') || auth()->user()->hasPermissionTo('view_reports') || auth()->user()->isSuperAdmin() || auth()->user()->hasRole(['data_protection_officer', 'legal_officer']))
                     <div class="space-y-1">
                         <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3">System Administration</span>
+                        @if(auth()->user()->hasPermissionTo('manage_settings'))
                         <a href="{{ route('admin.cms.index') }}#users" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-50 text-slate-600 hover:text-blue-800">
                             <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                             Users & Roles
                         </a>
+                        @endif
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRole(['data_protection_officer', 'legal_officer']) || auth()->user()->hasPermissionTo('manage_settings'))
                         <a href="{{ route('admin.compliance.index') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('admin.compliance.*') ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
                             <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             Data Privacy Compliance
                         </a>
+                        @endif
+                        @if(auth()->user()->hasPermissionTo('view_reports'))
                         <a href="{{ route('admin.cms.index') }}#reports" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-50 text-slate-600 hover:text-blue-800">
                             <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             Reports & Analytics
                         </a>
+                        @endif
+                        @if(auth()->user()->hasPermissionTo('manage_settings'))
                         <a href="{{ route('admin.cms.index') }}#logs" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all hover:bg-blue-50 text-slate-600 hover:text-blue-800">
                             <svg class="w-4 h-4 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Audit Logs & Settings
                         </a>
+                        @endif
                     </div>
+                    @endif
                 @endif
 
                 <a href="{{ route('profile.edit') }}" class="flex items-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all {{ request()->routeIs('profile.edit') ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">

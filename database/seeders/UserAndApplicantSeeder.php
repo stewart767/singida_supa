@@ -25,21 +25,37 @@ class UserAndApplicantSeeder extends Seeder
             ['email' => 'admin@supa.ac.tz'],
             ['name' => 'Dr. Emmanuel M. (Super Admin)', 'phone' => '+255711000001', 'role' => 'super_admin', 'password' => $password, 'is_active' => true, 'email_verified_at' => now()]
         );
+        $superAdminRole = \App\Models\Role::where('name', 'super_admin')->first();
+        if ($superAdminRole) {
+            $superAdmin->roles()->sync([$superAdminRole->id]);
+        }
 
         $registrar = User::updateOrCreate(
             ['email' => 'registrar@supa.ac.tz'],
             ['name' => 'Prof. Josephat K. (Registrar)', 'phone' => '+255711000002', 'role' => 'registrar', 'password' => $password, 'is_active' => true, 'email_verified_at' => now()]
         );
+        $registrarRole = \App\Models\Role::where('name', 'registrar')->first();
+        if ($registrarRole) {
+            $registrar->roles()->sync([$registrarRole->id]);
+        }
 
         $admissionOfficer = User::updateOrCreate(
             ['email' => 'admission@supa.ac.tz'],
             ['name' => 'Sarah J. (Admission Officer)', 'phone' => '+255711000003', 'role' => 'admission_officer', 'password' => $password, 'is_active' => true, 'email_verified_at' => now()]
         );
+        $admissionOfficerRole = \App\Models\Role::where('name', 'admission_officer')->first();
+        if ($admissionOfficerRole) {
+            $admissionOfficer->roles()->sync([$admissionOfficerRole->id]);
+        }
 
         $financeOfficer = User::updateOrCreate(
             ['email' => 'finance@supa.ac.tz'],
             ['name' => 'David M. (Finance Officer)', 'phone' => '+255711000004', 'role' => 'finance_officer', 'password' => $password, 'is_active' => true, 'email_verified_at' => now()]
         );
+        $financeOfficerRole = \App\Models\Role::where('name', 'finance_officer')->first();
+        if ($financeOfficerRole) {
+            $financeOfficer->roles()->sync([$financeOfficerRole->id]);
+        }
 
         // Fetch References
         $academicYear = AcademicYear::first();

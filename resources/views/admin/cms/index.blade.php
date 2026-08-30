@@ -7,6 +7,7 @@
         
         <!-- Interactive Primary Navigation Tabs -->
         <div class="bg-white p-2 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
+            @if(auth()->user()->hasPermissionTo('manage_settings'))
             <button @click="activeTab = 'cms'; window.location.hash = 'cms'" 
                     class="px-5 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-2"
                     :class="activeTab === 'cms' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-600 hover:bg-slate-100'">
@@ -22,11 +23,15 @@
                     :class="activeTab === 'users' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-600 hover:bg-slate-100'">
                 <span>Users & Roles</span>
             </button>
+            @endif
+            @if(auth()->user()->hasPermissionTo('view_reports'))
             <button @click="activeTab = 'reports'; window.location.hash = 'reports'" 
                     class="px-5 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-2"
                     :class="activeTab === 'reports' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-600 hover:bg-slate-100'">
                 <span>Reports & Analytics</span>
             </button>
+            @endif
+            @if(auth()->user()->hasPermissionTo('manage_settings'))
             <button @click="activeTab = 'comm'; window.location.hash = 'comm'" 
                     class="px-5 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center gap-2"
                     :class="activeTab === 'comm' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-600 hover:bg-slate-100'">
@@ -50,6 +55,7 @@
                     :class="activeTab === 'logs' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-600 hover:bg-slate-100'">
                 <span>Audit Logs</span>
             </button>
+            @endif
         </div>
 
         <!-- 1. WEBSITE CMS TAB CONTENT WITH SUB-DESKS -->
@@ -1049,11 +1055,32 @@
 
         <!-- 3. USERS & ROLES TAB -->
         <div x-show="activeTab === 'users'" x-cloak class="space-y-6">
-            <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+            
+            <!-- Users Sub-Tab Navigation Pills -->
+            <div class="flex flex-wrap gap-3 p-1.5 rounded-2xl bg-slate-100 text-xs font-bold w-fit">
+                <button @click="userSubTab = 'users'" 
+                        class="px-4 py-2 rounded-xl transition-all"
+                        :class="userSubTab === 'users' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'">
+                    👥 Users Directory
+                </button>
+                <button @click="userSubTab = 'roles'" 
+                        class="px-4 py-2 rounded-xl transition-all"
+                        :class="userSubTab === 'roles' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'">
+                    🔑 Role Permissions Manager
+                </button>
+                <button @click="userSubTab = 'permissions'" 
+                        class="px-4 py-2 rounded-xl transition-all"
+                        :class="userSubTab === 'permissions' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'">
+                    🛡️ System Permissions Catalog
+                </button>
+            </div>
+
+            <!-- 3.1 USERS DIRECTORY SUB-TAB -->
+            <div x-show="userSubTab === 'users'" class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
                     <div>
-                        <h3 class="font-extrabold text-slate-900 text-base">Users & Permissions Management (CRUD)</h3>
-                        <p class="text-xs text-slate-500">Add, view, edit, and assign staff role permissions & access levels.</p>
+                        <h3 class="font-extrabold text-slate-900 text-base">Users Directory</h3>
+                        <p class="text-xs text-slate-500">Add, view, edit, and assign staff roles & access levels.</p>
                     </div>
                     <button @click="showUserModal = true" class="gradient-btn-gold px-6 py-2.5 rounded-2xl text-slate-950 font-black text-xs shadow-md hover:scale-105 transition-transform flex items-center gap-2">
                         <span>+ Add New User Account</span>
@@ -1134,9 +1161,22 @@
                                             </select>
                                         </template>
                                         <template x-if="inlineEditingUserId !== u.id">
-                                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase"
-                                                  :class="{ 'bg-amber-500/20 text-amber-500 border border-amber-500/30': u.role === 'SUPER_ADMIN' || u.role === 'Super Admin', 'bg-purple-500/20 text-purple-400 border border-purple-500/30': u.role === 'REGISTRAR' || u.role === 'Registrar', 'bg-blue-500/20 text-blue-400 border border-blue-500/30': u.role === 'ADMISSION_OFFICER' || u.role === 'Admission Officer', 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': u.role === 'FINANCE_OFFICER' || u.role === 'Finance Officer', 'bg-slate-500/20 text-slate-500 border border-slate-500/30': u.role === 'APPLICANT' || u.role === 'Applicant' || u.role === 'User' }"
-                                                  x-text="u.role"></span>
+                                            <div class="flex flex-wrap gap-1">
+                                                <template x-for="r in u.roles" :key="r">
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse-subtle"
+                                                          :class="{ 
+                                                              'bg-amber-500/20 text-amber-500 border border-amber-500/30': r === 'SUPER_ADMIN' || r === 'SUPER_ADMINISTRATOR', 
+                                                              'bg-purple-500/20 text-purple-400 border border-purple-500/30': r === 'REGISTRAR', 
+                                                              'bg-blue-500/20 text-blue-400 border border-blue-500/30': r === 'ADMISSION_OFFICER', 
+                                                              'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': r === 'FINANCE_OFFICER', 
+                                                              'bg-slate-500/20 text-slate-500 border border-slate-500/30': r === 'APPLICANT' || r === 'USER' 
+                                                          }"
+                                                          x-text="r"></span>
+                                                </template>
+                                                <template x-if="!u.roles || u.roles.length === 0">
+                                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-500/20 text-slate-500 border border-slate-500/30 uppercase tracking-wider animate-pulse-subtle" x-text="u.role"></span>
+                                                </template>
+                                            </div>
                                         </template>
                                     </td>
 
@@ -1187,15 +1227,194 @@
                         </tbody>
                     </table>
                 </div>
+            </div> <!-- End of Users Directory Sub-Tab -->
+
+            <!-- 3.2 ROLE PERMISSIONS MANAGER SUB-TAB -->
+            <div x-show="userSubTab === 'roles'" class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-cloak>
+                <!-- Role List Column -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 lg:col-span-1">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h4 class="font-extrabold text-slate-900 text-sm">System Roles</h4>
+                        <button @click="showAddRoleModal = true" class="text-[11px] font-black text-amber-500 hover:underline">+ Add Role</button>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <template x-for="r in rolesList" :key="r.id">
+                            <div @click="selectRole(r)" 
+                                 class="p-4 rounded-2xl border transition-all cursor-pointer text-left"
+                                 :class="selectedRoleId === r.id ? 'bg-amber-500/10 border-amber-500 shadow-sm' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-extrabold text-slate-900 text-xs uppercase" x-text="r.display_name"></span>
+                                    <button x-show="!['super_admin', 'registrar', 'admission_officer', 'finance_officer', 'applicant'].includes(r.name)" 
+                                            @click.stop="confirmDeleteRole(r)" 
+                                            class="text-red-500 hover:text-red-700 text-xs">🗑️</button>
+                                </div>
+                                <span class="text-[10px] text-slate-500 mt-1 block" x-text="r.description || 'No description provided.'"></span>
+                                <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-extrabold text-[8px] mt-2 inline-block" x-text="(r.permissions ? r.permissions.length : 0) + ' permissions'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Permissions checklist for selected role -->
+                <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 lg:col-span-2 text-left">
+                    <template x-if="selectedRole">
+                        <div class="space-y-6">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                                <div>
+                                    <h4 class="font-extrabold text-slate-900 text-sm">Permissions for: <span class="text-amber-500 uppercase" x-text="selectedRole.display_name"></span></h4>
+                                    <p class="text-[10px] text-slate-500" x-text="selectedRole.description"></p>
+                                </div>
+                                <button @click="saveRolePermissions()" class="gradient-btn-gold px-5 py-2 rounded-xl text-slate-950 font-black text-xs shadow-md">
+                                    Save Permissions
+                                </button>
+                            </div>
+                            
+                            <!-- Permissions Grouped by Category -->
+                            <div class="space-y-6 max-h-[500px] overflow-y-auto pr-2">
+                                <template x-for="group in Object.keys(groupedPermissions)" :key="group">
+                                    <div class="space-y-2 border border-slate-100 p-4 rounded-2xl bg-slate-50">
+                                        <h5 class="text-[10px] font-black uppercase text-slate-500 tracking-wider" x-text="group"></h5>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <template x-for="p in groupedPermissions[group]" :key="p.id">
+                                                <label class="flex items-start gap-3 p-2 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 cursor-pointer text-xs transition-all">
+                                                    <input type="checkbox" 
+                                                           :value="p.id" 
+                                                           x-model="selectedRolePermissionIds" 
+                                                           class="rounded text-amber-500 mt-0.5">
+                                                    <div>
+                                                        <span class="font-bold text-slate-800" x-text="p.display_name"></span>
+                                                        <span class="block text-[9px] text-slate-400" x-text="p.name"></span>
+                                                    </div>
+                                                </label>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="!selectedRole">
+                        <div class="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                            <span class="text-3xl">🔑</span>
+                            <span class="text-xs font-bold">Select a role from the left pane to edit its permission mappings.</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 3.3 SYSTEM PERMISSIONS CATALOG SUB-TAB -->
+            <div x-show="userSubTab === 'permissions'" class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6" x-cloak>
+                <div class="border-b border-slate-100 pb-4">
+                    <h3 class="font-extrabold text-slate-900 text-base">System Permissions Catalog</h3>
+                    <p class="text-xs text-slate-500">Read-only reference list of all system permissions built into the application codebase.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
+                    <template x-for="group in Object.keys(groupedPermissions)" :key="group">
+                        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <h4 class="font-extrabold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-200 pb-2" x-text="group + ' Group'"></h4>
+                            <div class="space-y-3">
+                                <template x-for="p in groupedPermissions[group]" :key="p.id">
+                                    <div class="flex items-start gap-2">
+                                        <span class="text-amber-500">🛡️</span>
+                                        <div>
+                                            <span class="font-bold text-xs text-slate-800 block" x-text="p.display_name"></span>
+                                            <code class="text-[9px] bg-slate-200 px-1 py-0.5 rounded text-indigo-700 font-mono" x-text="p.name"></code>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
         <!-- 4. REPORTS & ANALYTICS TAB -->
+        @if(auth()->user()->hasPermissionTo('view_reports'))
         <div x-show="activeTab === 'reports'" x-cloak class="space-y-6">
             <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-                <div class="border-b border-slate-100 pb-4">
-                    <h3 class="font-extrabold text-slate-900 text-base">Executive Reports Exporter</h3>
-                    <p class="text-xs text-slate-500">Download formatted admission logs and CSV financial reports.</p>
+                <div class="border-b border-slate-100 pb-4 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-base">Executive Reports Exporter</h3>
+                        <p class="text-xs text-slate-500">Download formatted admission logs and CSV financial reports.</p>
+                    </div>
+                </div>
+
+                <!-- Interactive Premium Filter Panel -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-150 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                            ⚙️ Report Filters
+                        </span>
+                        <button type="button" @click="resetReportFilters()" class="text-[10px] text-blue-600 hover:text-blue-800 font-extrabold transition-colors">
+                            Reset All Filters
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                        <!-- Year Selector -->
+                        <div>
+                            <label class="block text-[9px] font-extrabold text-slate-500 uppercase mb-1">Academic Year</label>
+                            <select x-model="reportFilter.year" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                                <option value="">All Years</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        <!-- Month Selector -->
+                        <div>
+                            <label class="block text-[9px] font-extrabold text-slate-500 uppercase mb-1">Created Month</label>
+                            <select x-model="reportFilter.month" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                                <option value="">All Months</option>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <!-- Start Date -->
+                        <div>
+                            <label class="block text-[9px] font-extrabold text-slate-500 uppercase mb-1">Start Date</label>
+                            <input type="date" x-model="reportFilter.start_date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                        </div>
+                        <!-- End Date -->
+                        <div>
+                            <label class="block text-[9px] font-extrabold text-slate-500 uppercase mb-1">End Date</label>
+                            <input type="date" x-model="reportFilter.end_date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                        </div>
+                        <!-- Status Selector (Admissions & Payments) -->
+                        <div>
+                            <label class="block text-[9px] font-extrabold text-slate-500 uppercase mb-1">Status Classification</label>
+                            <select x-model="reportFilter.status" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                                <option value="">All (Default)</option>
+                                <optgroup label="Admissions / Applications">
+                                    <option value="pending">Pending Admissions (All)</option>
+                                    <option value="active">Active Admissions (Approved)</option>
+                                    <option value="Rejected">Rejected Admissions</option>
+                                    <option value="Draft">Draft Mode</option>
+                                </optgroup>
+                                <optgroup label="Payments Status">
+                                    <option value="paid">Paid & Verified Payments</option>
+                                    <option value="pending">Pending Payments</option>
+                                    <option value="rejected">Rejected Payments</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-semibold italic">
+                        💡 Note: Filter conditions apply instantly to all download and export links below.
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -1203,12 +1422,19 @@
                         <h4 class="font-extrabold text-slate-900 text-sm">Applications Report</h4>
                         <p class="text-xs text-slate-500">Complete listing of student applicants and status.</p>
                         <div class="space-y-2">
-                            <a href="{{ route('admin.reports.pdf', ['type' => 'applications', 'download' => 1]) }}" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
+                            @if(auth()->user()->hasPermissionTo('download_reports'))
+                            <a :href="getReportUrl('applications', 'pdf')" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
                                 📄 Download PDF Report (With Logo)
                             </a>
-                            <a href="{{ url('/api/v1/admin/export-report?type=applications') }}" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
+                            <a :href="getReportUrl('applications', 'csv')" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
                                 Export Applications CSV &rarr;
                             </a>
+                            @else
+                            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                                <span class="text-xs font-bold text-slate-400 block">🔒 Downloads Disabled</span>
+                                <span class="text-[9px] text-slate-400 mt-1 block">Requires download permission</span>
+                            </div>
+                            @endif
                         </div>
                     </div>
 
@@ -1216,12 +1442,19 @@
                         <h4 class="font-extrabold text-slate-900 text-sm">Payments & Revenue</h4>
                         <p class="text-xs text-slate-500">Control numbers and verified fee receipts.</p>
                         <div class="space-y-2">
-                            <a href="{{ route('admin.reports.pdf', ['type' => 'payments', 'download' => 1]) }}" target="_blank" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
+                            @if(auth()->user()->hasPermissionTo('download_reports'))
+                            <a :href="getReportUrl('payments', 'pdf')" target="_blank" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
                                 📄 Download PDF Report (With Logo)
                             </a>
-                            <a href="{{ url('/api/v1/admin/export-report?type=payments') }}" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
+                            <a :href="getReportUrl('payments', 'csv')" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
                                 Export Revenue CSV &rarr;
                             </a>
+                            @else
+                            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                                <span class="text-xs font-bold text-slate-400 block">🔒 Downloads Disabled</span>
+                                <span class="text-[9px] text-slate-400 mt-1 block">Requires download permission</span>
+                            </div>
+                            @endif
                         </div>
                     </div>
 
@@ -1229,17 +1462,25 @@
                         <h4 class="font-extrabold text-slate-900 text-sm">Admitted Students List</h4>
                         <p class="text-xs text-slate-500">Approved candidates with issued admission numbers.</p>
                         <div class="space-y-2">
-                            <a href="{{ route('admin.reports.pdf', ['type' => 'admitted', 'download' => 1]) }}" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
+                            @if(auth()->user()->hasPermissionTo('download_reports'))
+                            <a :href="getReportUrl('admitted', 'pdf')" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white block text-center py-2.5 rounded-2xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
                                 📄 Download PDF Report (With Logo)
                             </a>
-                            <a href="{{ url('/api/v1/admin/export-report?type=admitted') }}" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
+                            <a :href="getReportUrl('admitted', 'csv')" target="_blank" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 block text-center py-2 rounded-2xl font-bold text-xs transition-all">
                                 Export Admitted List &rarr;
                             </a>
+                            @else
+                            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                                <span class="text-xs font-bold text-slate-400 block">🔒 Downloads Disabled</span>
+                                <span class="text-[9px] text-slate-400 mt-1 block">Requires download permission</span>
+                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        @endif
 
         <!-- 5. COMMUNICATION LOGS TAB -->
         <div x-show="activeTab === 'comm'" x-cloak class="space-y-6">
@@ -1643,17 +1884,17 @@
                     <label class="block text-xs font-extrabold uppercase mb-1">Email Address</label>
                     <input type="email" x-model="newUser.email" placeholder="hassan@supa.ac.tz" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-extrabold uppercase mb-1">Assigned Role</label>
-                        <select x-model="newUser.role" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
-                            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                            <option value="REGISTRAR">REGISTRAR</option>
-                            <option value="ADMISSION_OFFICER">ADMISSION_OFFICER</option>
-                            <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
-                            <option value="APPLICANT">APPLICANT</option>
-                        </select>
+                <div class="space-y-3">
+                    <label class="block text-xs font-extrabold uppercase mb-1 text-left">Select System Roles *</label>
+                    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 max-h-36 overflow-y-auto">
+                        <template x-for="r in rolesList" :key="r.id">
+                            <label class="flex items-center gap-2 p-1.5 hover:bg-white rounded-lg cursor-pointer text-xs font-bold">
+                                <input type="checkbox" :value="r.name.toUpperCase()" x-model="newUser.roles" class="rounded text-amber-500">
+                                <span x-text="r.name.toUpperCase()"></span>
+                            </label>
+                        </template>
                     </div>
+                </div>
                     <div>
                         <label class="block text-xs font-extrabold uppercase mb-1">Account Status</label>
                         <select x-model="newUser.status" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
@@ -1661,7 +1902,6 @@
                             <option value="Deactivated">Deactivated</option>
                         </select>
                     </div>
-                </div>
                 <div>
                     <label class="block text-xs font-extrabold uppercase mb-1">Initial Password (Optional)</label>
                     <input type="password" x-model="newUser.password" placeholder="Defaults to password123" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
@@ -1685,17 +1925,17 @@
                     <label class="block text-xs font-extrabold uppercase mb-1">Email Address</label>
                     <input type="email" x-model="editUserData.email" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-extrabold uppercase mb-1">Assigned Role</label>
-                        <select x-model="editUserData.role" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
-                            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                            <option value="REGISTRAR">REGISTRAR</option>
-                            <option value="ADMISSION_OFFICER">ADMISSION_OFFICER</option>
-                            <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
-                            <option value="APPLICANT">APPLICANT</option>
-                        </select>
+                <div class="space-y-3">
+                    <label class="block text-xs font-extrabold uppercase mb-1 text-left">Select System Roles *</label>
+                    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 max-h-36 overflow-y-auto">
+                        <template x-for="r in rolesList" :key="r.id">
+                            <label class="flex items-center gap-2 p-1.5 hover:bg-white rounded-lg cursor-pointer text-xs font-bold">
+                                <input type="checkbox" :value="r.name.toUpperCase()" x-model="editUserData.roles" class="rounded text-amber-500">
+                                <span x-text="r.name.toUpperCase()"></span>
+                            </label>
+                        </template>
                     </div>
+                </div>
                     <div>
                         <label class="block text-xs font-extrabold uppercase mb-1">Account Status</label>
                         <select x-model="editUserData.status" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
@@ -1703,7 +1943,6 @@
                             <option value="Deactivated">Deactivated</option>
                         </select>
                     </div>
-                </div>
                 <div class="border-t border-slate-100 pt-3 space-y-2">
                     <h5 class="text-[10px] font-black uppercase text-slate-500">Security & Verifications</h5>
                     <div class="flex items-center space-x-2 text-xs font-bold text-slate-700">
@@ -1747,6 +1986,42 @@
                 <div class="flex justify-center space-x-3 pt-2">
                     <button @click="showDeleteUserModal = false" class="px-5 py-2.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Cancel</button>
                     <button @click="deleteUserConfirmed()" class="px-6 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-md">Confirm Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CREATE ROLE -->
+        <div x-show="showAddRoleModal" class="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+            <div class="bg-white max-w-md w-full p-8 rounded-3xl shadow-2xl border border-slate-200 space-y-4">
+                <h3 class="text-xl font-extrabold text-slate-900">Create System Role</h3>
+                <div>
+                    <label class="block text-xs font-extrabold uppercase mb-1">Role Key (e.g. hr_officer, content_editor) *</label>
+                    <input type="text" x-model="newRole.name" placeholder="e.g. content_editor" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-extrabold uppercase mb-1">Display Name *</label>
+                    <input type="text" x-model="newRole.display_name" placeholder="e.g. Content Editor" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-extrabold uppercase mb-1">Description</label>
+                    <textarea x-model="newRole.description" rows="3" placeholder="Explain the responsibilities of this role..." class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="showAddRoleModal = false" class="px-5 py-2 rounded-2xl bg-slate-200 text-xs font-extrabold">Cancel</button>
+                    <button @click="addRole()" class="gradient-btn-gold px-6 py-2 rounded-2xl text-slate-950 font-extrabold text-xs shadow-md">Create Role</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: DELETE ROLE CONFIRMATION -->
+        <div x-show="showDeleteRoleModal" class="fixed inset-0 bg-white/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+            <div class="bg-white max-w-md w-full p-8 rounded-3xl shadow-2xl border border-slate-200 space-y-4 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto text-2xl font-bold">⚠️</div>
+                <h3 class="text-lg font-extrabold text-slate-900">Delete System Role?</h3>
+                <p class="text-xs text-slate-500">Are you sure you want to delete role <strong class="text-slate-900" x-text="selectedRoleForDelete?.display_name"></strong>? This will detach it from all users and remove its permission records.</p>
+                <div class="flex justify-center space-x-3 pt-2">
+                    <button @click="showDeleteRoleModal = false" class="px-5 py-2.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Cancel</button>
+                    <button @click="deleteRoleConfirmed()" class="px-6 py-2.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-md">Confirm Delete</button>
                 </div>
             </div>
         </div>
@@ -2064,17 +2339,54 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('cmsDesk', () => ({
-                activeTab: window.location.hash ? window.location.hash.replace('#', '') : 'cms',
+                activeTab: (window.location.hash && (window.location.hash === '#reports' || {{ auth()->user()->hasPermissionTo("manage_settings") ? 'true' : 'false' }})) ? window.location.hash.replace('#', '') : '{{ auth()->user()->hasPermissionTo("manage_settings") ? "cms" : "reports" }}',
                 cmsSubTab: 'sliders',
+
+                // Reports Filters State
+                reportFilter: {
+                    year: '',
+                    month: '',
+                    start_date: '',
+                    end_date: '',
+                    status: ''
+                },
 
                 init() {
                     this.updateTabFromHash();
                 },
 
+                resetReportFilters() {
+                    this.reportFilter = {
+                        year: '',
+                        month: '',
+                        start_date: '',
+                        end_date: '',
+                        status: ''
+                    };
+                },
+
+                getReportUrl(type, format) {
+                    let baseUrl = format === 'pdf' ? "{{ route('admin.reports.pdf') }}" : "{{ url('/api/v1/admin/export-report') }}";
+                    let params = new URLSearchParams();
+                    params.append('type', type);
+                    if (format === 'pdf') {
+                        params.append('download', '1');
+                    }
+                    if (this.reportFilter.year) params.append('year', this.reportFilter.year);
+                    if (this.reportFilter.month) params.append('month', this.reportFilter.month);
+                    if (this.reportFilter.start_date) params.append('start_date', this.reportFilter.start_date);
+                    if (this.reportFilter.end_date) params.append('end_date', this.reportFilter.end_date);
+                    if (this.reportFilter.status) params.append('status', this.reportFilter.status);
+                    return `${baseUrl}?${params.toString()}`;
+                },
+
                 updateTabFromHash() {
                     if (window.location.hash) {
                         const h = window.location.hash.replace('#', '');
-                        if (['cms', 'media', 'users', 'reports', 'comm', 'settings', 'logs'].includes(h)) {
+                        const allowed = {{ auth()->user()->hasPermissionTo("manage_settings") ? 'true' : 'false' }};
+                        if (h === 'reports') {
+                            this.activeTab = h;
+                        } else if (allowed && ['cms', 'media', 'users', 'comm', 'settings', 'logs'].includes(h)) {
                             this.activeTab = h;
                         }
                     }
@@ -2139,8 +2451,100 @@
                 showEditUserModal: false,
                 showDeleteUserModal: false,
                 selectedUser: null,
-                newUser: { name: '', email: '', role: 'ADMISSION_OFFICER', password: '', status: 'Active' },
-                editUserData: { id: null, name: '', email: '', role: 'ADMISSION_OFFICER', status: 'Active', password: '' },
+                newUser: { name: '', email: '', roles: ['ADMISSION_OFFICER'], password: '', status: 'Active' },
+                editUserData: { id: null, name: '', email: '', roles: [], status: 'Active', password: '' },
+
+                userSubTab: 'users',
+                rolesList: @json($roles),
+                permissionsList: @json($permissions),
+                showAddRoleModal: false,
+                showDeleteRoleModal: false,
+                selectedRoleForDelete: null,
+                newRole: { name: '', display_name: '', description: '' },
+                selectedRoleId: null,
+                selectedRole: null,
+                selectedRolePermissionIds: [],
+
+                get groupedPermissions() {
+                    let grouped = {};
+                    this.permissionsList.forEach(p => {
+                        let g = p.group ? p.group.toUpperCase() : 'GENERAL';
+                        if (!grouped[g]) grouped[g] = [];
+                        grouped[g].push(p);
+                    });
+                    return grouped;
+                },
+
+                selectRole(role) {
+                    this.selectedRoleId = role.id;
+                    this.selectedRole = role;
+                    this.selectedRolePermissionIds = role.permissions ? role.permissions.map(p => p.id) : [];
+                },
+
+                addRole() {
+                    if (!this.newRole.name || !this.newRole.display_name) {
+                        toast('Role name and display name are required.', 'error');
+                        return;
+                    }
+                    axios.post('{{ route('admin.cms.roles.store') }}', this.newRole)
+                        .then(res => {
+                            if (res.data.success && res.data.role) {
+                                this.rolesList.push(res.data.role);
+                                toast(res.data.message || 'Role created successfully!', 'success');
+                                this.showAddRoleModal = false;
+                                this.newRole = { name: '', display_name: '', description: '' };
+                            }
+                        })
+                        .catch(err => {
+                            toast(err.response?.data?.message || 'Error creating role', 'error');
+                        });
+                },
+
+                confirmDeleteRole(role) {
+                    this.selectedRoleForDelete = role;
+                    this.showDeleteRoleModal = true;
+                },
+
+                deleteRoleConfirmed() {
+                    if (!this.selectedRoleForDelete) return;
+                    axios.delete('{{ url('/admin/cms/roles') }}/' + this.selectedRoleForDelete.id)
+                        .then(res => {
+                            if (res.data.success) {
+                                this.rolesList = this.rolesList.filter(r => r.id !== this.selectedRoleForDelete.id);
+                                if (this.selectedRoleId === this.selectedRoleForDelete.id) {
+                                    this.selectedRoleId = null;
+                                    this.selectedRole = null;
+                                    this.selectedRolePermissionIds = [];
+                                }
+                                toast(res.data.message || 'Role deleted successfully.', 'success');
+                            }
+                        })
+                        .catch(err => {
+                            toast('Error deleting role.', 'error');
+                        });
+                    this.showDeleteRoleModal = false;
+                    this.selectedRoleForDelete = null;
+                },
+
+                saveRolePermissions() {
+                    if (!this.selectedRole) return;
+                    axios.post('{{ url('/admin/cms/roles') }}/' + this.selectedRole.id + '/permissions', {
+                        permissions: this.selectedRolePermissionIds
+                    })
+                    .then(res => {
+                        if (res.data.success && res.data.role) {
+                            const idx = this.rolesList.findIndex(r => r.id === this.selectedRole.id);
+                            if (idx !== -1) {
+                                this.rolesList[idx] = res.data.role;
+                            }
+                            this.selectedRole = res.data.role;
+                            toast(res.data.message || 'Permissions updated successfully!', 'success');
+                        }
+                    })
+                    .catch(err => {
+                        toast('Error saving permissions.', 'error');
+                    });
+                },
 
                 // Communication Logs (CRUD)
                 commLogs: [
@@ -2590,6 +2994,9 @@
 
                 openEditUser(u) {
                     this.editUserData = { ...JSON.parse(JSON.stringify(u)), password: '' };
+                    if (!this.editUserData.roles) {
+                        this.editUserData.roles = [u.role ? u.role.toUpperCase() : 'APPLICANT'];
+                    }
                     this.showEditUserModal = true;
                 },
 
@@ -2646,7 +3053,7 @@
                                 this.usersList.unshift({ id: Date.now(), ...this.newUser });
                             }
                             this.showUserModal = false;
-                            this.newUser = { name: '', email: '', role: 'ADMISSION_OFFICER', password: '', status: 'Active' };
+                            this.newUser = { name: '', email: '', roles: ['ADMISSION_OFFICER'], password: '', status: 'Active' };
                             toast(res.data.message || 'New Portal User Account created!', 'success');
                         })
                         .catch(err => {

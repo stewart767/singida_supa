@@ -34,7 +34,11 @@ class ApplicationRepository implements ApplicationRepositoryInterface
         }
 
         if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            if ($filters['status'] === 'Pending') {
+                $query->whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist']);
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
 
         if (!empty($filters['programme_id'])) {

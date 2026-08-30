@@ -61,8 +61,27 @@ class AdminWebController extends Controller
 
     public function payments(Request $request)
     {
-        $payments = Payment::with(['application.applicant.user', 'application.programme'])->latest()->paginate(15);
-        return view('admin.payments.index', compact('payments'));
+        $query = Payment::with(['application.applicant.user', 'application.programme'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('payment_status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('control_number', 'like', "%{$search}%")
+                  ->orWhereHas('application.applicant.user', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $payments = $query->paginate(15);
+        $filters = $request->only(['search', 'status']);
+        return view('admin.payments.index', compact('payments', 'filters'));
     }
 
     public function programmes()
@@ -255,12 +274,13 @@ class AdminWebController extends Controller
             ];
         }
 
-        $usersList = User::select('id', 'name', 'email', 'role', 'is_active', 'is_locked', 'password_force_change', 'email_verified_at')->latest()->get()->map(function($u) {
+        $usersList = User::with('roles')->latest()->get()->map(function($u) {
             return [
                 'id' => $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
                 'role' => $u->role ?? 'User',
+                'roles' => $u->roles->map(fn($r) => strtoupper($r->name))->toArray(),
                 'status' => $u->is_active ? 'Active' : 'Deactivated',
                 'is_locked' => (bool)$u->is_locked,
                 'password_force_change' => (bool)$u->password_force_change,
@@ -368,11 +388,15 @@ class AdminWebController extends Controller
             'terms' => Setting::get('terms_conditions_content', ''),
         ];
 
+        $roles = \App\Models\Role::with('permissions')->get();
+        $permissions = \App\Models\Permission::all();
+
         return view('admin.cms.index', compact(
             'logos', 'banners', 'defaultAbout', 'defaultFooter', 
             'programmesList', 'mediaFiles', 'usersList', 'auditLogs', 
             'systemSettings', 'newsList', 'contactMessages', 'contactSettings',
-            'programmeCategories', 'catalogHeader', 'pageBanners', 'policies'
+            'programmeCategories', 'catalogHeader', 'pageBanners', 'policies',
+            'roles', 'permissions'
         ));
     }
 
@@ -990,7 +1014,8 @@ class AdminWebController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'role' => ['required', 'string'],
+            'role' => ['nullable', 'string'],
+            'roles' => ['nullable', 'array'],
             'password' => ['nullable', 'string', 'min:6'],
             'status' => ['nullable', 'string'],
         ]);
@@ -998,18 +1023,34 @@ class AdminWebController extends Controller
         $password = !empty($validated['password']) ? $validated['password'] : 'password123';
         $status = !empty($validated['status']) ? $validated['status'] : 'Active';
 
+        $rolesInput = [];
+        if (!empty($validated['roles'])) {
+            $rolesInput = $validated['roles'];
+        } elseif (!empty($validated['role'])) {
+            $rolesInput = [$validated['role']];
+        }
+
+        if (empty($rolesInput)) {
+            $rolesInput = ['APPLICANT'];
+        }
+
+        $primaryRole = strtoupper($rolesInput[0]);
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
+            'role' => $primaryRole,
             'is_active' => ($status === 'Active'),
             'password' => Hash::make($password),
         ]);
 
+        $roleIds = \App\Models\Role::whereIn('name', array_map('strtolower', $rolesInput))->pluck('id')->toArray();
+        $user->roles()->sync($roleIds);
+
         AuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'User Created',
-            'description' => "Created user '{$user->name}' ({$user->email}) with role '{$user->role}'",
+            'description' => "Created user '{$user->name}' ({$user->email}) with roles: " . implode(', ', $rolesInput),
             'ip_address' => $request->ip()
         ]);
 
@@ -1022,6 +1063,7 @@ class AdminWebController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    'roles' => $user->roles->map(fn($r) => strtoupper($r->name))->toArray(),
                     'status' => $user->is_active ? 'Active' : 'Deactivated'
                 ]
             ]);
@@ -1035,7 +1077,8 @@ class AdminWebController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email,' . $user->id],
-            'role' => ['required', 'string'],
+            'role' => ['nullable', 'string'],
+            'roles' => ['nullable', 'array'],
             'status' => ['required', 'string'],
             'password' => ['nullable', 'string', 'min:6'],
             'is_locked' => ['nullable', 'boolean'],
@@ -1043,10 +1086,23 @@ class AdminWebController extends Controller
             'email_verified_at' => ['nullable'],
         ]);
 
+        $rolesInput = [];
+        if (!empty($validated['roles'])) {
+            $rolesInput = $validated['roles'];
+        } elseif (!empty($validated['role'])) {
+            $rolesInput = [$validated['role']];
+        }
+
+        if (empty($rolesInput)) {
+            $rolesInput = ['APPLICANT'];
+        }
+
+        $primaryRole = strtoupper($rolesInput[0]);
+
         $data = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
+            'role' => $primaryRole,
             'is_active' => ($validated['status'] === 'Active'),
             'is_locked' => $request->boolean('is_locked'),
             'password_force_change' => $request->boolean('password_force_change'),
@@ -1062,10 +1118,13 @@ class AdminWebController extends Controller
 
         $user->update($data);
 
+        $roleIds = \App\Models\Role::whereIn('name', array_map('strtolower', $rolesInput))->pluck('id')->toArray();
+        $user->roles()->sync($roleIds);
+
         AuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'User Updated',
-            'description' => "Updated user '{$user->name}' details (Role: {$user->role}, Status: " . ($user->is_active ? 'Active' : 'Deactivated') . ")",
+            'description' => "Updated user '{$user->name}' details. Roles: " . implode(', ', $rolesInput),
             'ip_address' => $request->ip()
         ]);
 
@@ -1078,6 +1137,7 @@ class AdminWebController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    'roles' => $user->roles->map(fn($r) => strtoupper($r->name))->toArray(),
                     'status' => $user->is_active ? 'Active' : 'Deactivated',
                     'is_locked' => (bool)$user->is_locked,
                     'password_force_change' => (bool)$user->password_force_change,
@@ -1168,7 +1228,12 @@ class AdminWebController extends Controller
 
     public function exportPdfReport(Request $request)
     {
+        if (!auth()->user()->hasPermissionTo('download_reports')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $type = $request->get('type', 'applications');
+        $filters = $request->only(['year', 'month', 'start_date', 'end_date', 'status']);
         $generatedAt = now()->format('d M Y, h:i A');
         $refNumber = 'SUPA/REP/' . date('Ymd') . '/' . strtoupper(substr(md5(microtime()), 0, 5));
 
@@ -1187,27 +1252,24 @@ class AdminWebController extends Controller
 
         if ($type === 'applications') {
             $reportTitle = 'Student Applications & Udahili Report';
-            $records = Application::with(['applicant.user', 'programme'])->latest()->get();
+            $records = $this->reportService->getFilteredReportQuery('applications', $filters)->latest()->get();
             $metrics = [
                 'total_records' => $records->count(),
-                'approved' => Application::where('status', 'Approved')->count(),
-                'pending' => Application::whereIn('status', ['Pending Payment', 'Under Review', 'Submitted'])->count(),
-                'rejected' => Application::where('status', 'Rejected')->count(),
+                'approved' => $records->where('status', 'Approved')->count(),
+                'pending' => $records->whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist'])->count(),
+                'rejected' => $records->where('status', 'Rejected')->count(),
             ];
         } elseif ($type === 'payments') {
             $reportTitle = 'Payments, Control Numbers & Revenue Report';
-            $records = Payment::with(['application.applicant.user', 'application.programme'])->latest()->get();
+            $records = $this->reportService->getFilteredReportQuery('payments', $filters)->latest()->get();
             $metrics = [
                 'total_records' => $records->count(),
-                'total_amount' => Payment::where('payment_status', 'paid')->sum('amount'),
-                'verified' => Payment::where('payment_status', 'paid')->count(),
+                'total_amount' => $records->where('payment_status', 'paid')->sum('amount'),
+                'verified' => $records->where('payment_status', 'paid')->count(),
             ];
         } elseif ($type === 'admitted') {
             $reportTitle = 'Official Admitted Candidates List';
-            $records = Application::with(['applicant.user', 'programme'])
-                ->where('status', 'Approved')
-                ->latest()
-                ->get();
+            $records = $this->reportService->getFilteredReportQuery('admitted', $filters)->latest()->get();
             $degreeCount = $records->filter(fn($a) => \Illuminate\Support\Str::contains(strtolower($a->programme->name ?? ''), 'bachelor') || \Illuminate\Support\Str::contains(strtolower($a->programme->code ?? ''), 'ba') || \Illuminate\Support\Str::contains(strtolower($a->programme->code ?? ''), 'bsc'))->count();
             $metrics = [
                 'total_records' => $records->count(),
@@ -1300,6 +1362,74 @@ class AdminWebController extends Controller
                 'message' => 'Failed to fix database URLs: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function storeRole(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'unique:roles,name', 'max:255'],
+            'display_name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $role = \App\Models\Role::create([
+            'name' => strtolower(str_replace([' ', '-'], '_', $validated['name'])),
+            'display_name' => $validated['display_name'],
+            'description' => $validated['description'],
+        ]);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Role Created',
+            'description' => "Created role '{$role->display_name}'",
+            'ip_address' => $request->ip()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Role '{$role->display_name}' created successfully!",
+            'role' => $role->load('permissions')
+        ]);
+    }
+
+    public function updateRolePermissions(Request $request, \App\Models\Role $role)
+    {
+        $request->validate([
+            'permissions' => ['required', 'array'],
+        ]);
+
+        $role->permissions()->sync($request->permissions);
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Role Permissions Updated',
+            'description' => "Updated permissions for role '{$role->display_name}'",
+            'ip_address' => $request->ip()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Permissions for role '{$role->display_name}' updated successfully!",
+            'role' => $role->load('permissions')
+        ]);
+    }
+
+    public function destroyRole(\App\Models\Role $role)
+    {
+        $roleName = $role->display_name;
+        $role->delete();
+
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'Role Deleted',
+            'description' => "Deleted role '{$roleName}'",
+            'ip_address' => request()->ip()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Role '{$roleName}' deleted successfully."
+        ]);
     }
 }
 

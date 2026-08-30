@@ -102,7 +102,7 @@ Route::middleware(['auth'])->prefix('applicant')->group(function () {
 | Staff & Admin Management Panel Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->prefix('admin')->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\AdminPermissionMiddleware::class])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminWebController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/applications', [AdminWebController::class, 'applications'])->name('admin.applications.index');
     Route::get('/applications/{application}', [AdminWebController::class, 'showApplication'])->name('admin.applications.show');
@@ -131,6 +131,9 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::put('/cms/users/{user}', [AdminWebController::class, 'updateUser'])->name('admin.cms.users.update');
     Route::post('/cms/users/{user}/status', [AdminWebController::class, 'toggleUserStatus'])->name('admin.cms.users.status');
     Route::delete('/cms/users/{user}', [AdminWebController::class, 'destroyUser'])->name('admin.cms.users.destroy');
+    Route::post('/cms/roles', [AdminWebController::class, 'storeRole'])->name('admin.cms.roles.store');
+    Route::post('/cms/roles/{role}/permissions', [AdminWebController::class, 'updateRolePermissions'])->name('admin.cms.roles.permissions');
+    Route::delete('/cms/roles/{role}', [AdminWebController::class, 'destroyRole'])->name('admin.cms.roles.destroy');
     Route::post('/cms/audit-logs/clear', [AdminWebController::class, 'clearAuditLogs'])->name('admin.cms.audit_logs.clear');
     Route::post('/cms/comm/send', [AdminWebController::class, 'sendCommunicationAlert'])->name('admin.cms.comm.send');
     Route::get('/reports/pdf', [AdminWebController::class, 'exportPdfReport'])->name('admin.reports.pdf');

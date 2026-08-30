@@ -8,7 +8,7 @@ class MakeAdmissionDecisionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check() && auth()->user()->isStaff();
+        return auth()->check() && $this->user()->hasPermissionTo('make_admission_decisions');
     }
 
     public function rules(): array

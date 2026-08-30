@@ -72,6 +72,7 @@ class AppServiceProvider extends ServiceProvider
                 'app.url' => $detectedUrl,
                 'filesystems.disks.public.url' => $detectedUrl . '/storage',
             ]);
+            \Illuminate\Support\Facades\URL::forceRootUrl($detectedUrl);
         }
 
         // Force HTTPS URL scheme on live domain (supa.ac.tz) or in production mode

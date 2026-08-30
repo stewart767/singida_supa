@@ -52,6 +52,8 @@ class ApplicationManagementController extends Controller
 
     public function verifyDocument(Request $request, ApplicationDocument $document): JsonResponse
     {
+        abort_unless(auth()->user()->hasPermissionTo('verify_documents'), 403);
+
         $request->validate([
             'status' => ['required', 'in:verified,rejected'],
             'rejection_comment' => ['nullable', 'string', 'max:500'],
@@ -108,6 +110,8 @@ class ApplicationManagementController extends Controller
 
     public function bulkApprove(Request $request): JsonResponse
     {
+        abort_unless(auth()->user()->hasPermissionTo('make_admission_decisions'), 403);
+
         $request->validate([
             'application_ids' => ['required', 'array'],
             'application_ids.*' => ['exists:applications,id'],

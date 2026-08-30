@@ -9,7 +9,7 @@ class ProgrammePolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->isSuperAdmin() || $user->isStaff()) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -23,6 +23,6 @@ class ProgrammePolicy
 
     public function manage(User $user): bool
     {
-        return $user->isStaff();
+        return $user->hasPermissionTo('manage_programmes');
     }
 }

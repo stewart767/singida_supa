@@ -9,7 +9,7 @@ class ApplicationPolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->isSuperAdmin() || $user->isStaff()) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -18,12 +18,16 @@ class ApplicationPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isStaff();
+        return $user->hasPermissionTo('manage_applications') 
+            || $user->hasPermissionTo('verify_documents') 
+            || $user->hasPermissionTo('make_admission_decisions');
     }
 
     public function view(User $user, Application $application): bool
     {
-        if ($user->isStaff()) {
+        if ($user->hasPermissionTo('manage_applications') 
+            || $user->hasPermissionTo('verify_documents') 
+            || $user->hasPermissionTo('make_admission_decisions')) {
             return true;
         }
 
@@ -37,7 +41,7 @@ class ApplicationPolicy
 
     public function update(User $user, Application $application): bool
     {
-        if ($user->isStaff()) {
+        if ($user->hasPermissionTo('manage_applications')) {
             return true;
         }
 
@@ -49,11 +53,11 @@ class ApplicationPolicy
 
     public function verify(User $user, Application $application): bool
     {
-        return $user->isStaff();
+        return $user->hasPermissionTo('verify_documents');
     }
 
     public function decide(User $user, Application $application): bool
     {
-        return $user->isStaff();
+        return $user->hasPermissionTo('make_admission_decisions');
     }
 }

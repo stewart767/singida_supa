@@ -16,6 +16,8 @@ class ReportController extends Controller
 
     public function dashboardMetrics(): JsonResponse
     {
+        abort_unless(auth()->user()->hasPermissionTo('view_dashboard'), 403);
+
         return response()->json([
             'metrics' => $this->reportExporter->getAnalyticsSummary(),
         ]);
@@ -23,8 +25,13 @@ class ReportController extends Controller
 
     public function exportCsv(Request $request): Response
     {
+        if (!auth()->user()->hasPermissionTo('download_reports')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $type = $request->get('type', 'applications');
-        $csvContent = $this->reportExporter->generateCsvReport($type);
+        $filters = $request->only(['year', 'month', 'start_date', 'end_date', 'status']);
+        $csvContent = $this->reportExporter->generateCsvReport($type, $filters);
 
         return response($csvContent, 200, [
             'Content-Type' => 'text/csv',

@@ -8,7 +8,7 @@ class StoreProgrammeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check() && auth()->user()->isStaff();
+        return auth()->check() && $this->user()->hasPermissionTo('manage_programmes');
     }
 
     public function rules(): array

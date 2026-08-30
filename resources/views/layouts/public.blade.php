@@ -62,10 +62,16 @@
           mobileMenu: false, 
           programmeMenu: false, 
           admissionMenu: false,
-          admissionModal: true,
+          admissionModal: {{ request()->routeIs('home') ? 'true' : 'false' }},
           admissionStep: 1,
           progSearch: '',
           modalProgrammes: {{ json_encode($modalProgrammesList) }},
+          trackNumber: '',
+          trackResult: null,
+          trackError: null,
+          trackLoading: false,
+          trackOtpLoading: false,
+          trackOtpError: null,
           get filteredProgrammes() {
               if (!this.progSearch || !this.progSearch.trim()) {
                   return this.modalProgrammes;
@@ -639,7 +645,7 @@
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  @click.stop
                  class="relative transform overflow-hidden rounded-3xl bg-white shadow-2xl transition-all duration-300 w-full border border-slate-100"
-                 :class="admissionStep === 2 ? 'max-w-4xl p-5 sm:p-8 text-left' : 'max-w-2xl p-8 sm:p-12 text-center'">
+                 :class="admissionStep === 2 || admissionStep === 3 ? 'max-w-4xl p-5 sm:p-8 text-left' : 'max-w-2xl p-8 sm:p-12 text-center'">
                 
                 <!-- STEP 1: Welcome & Initial Prompt -->
                 <div x-show="admissionStep === 1" 
@@ -690,6 +696,14 @@
                                 class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#ff5500] hover:bg-[#e04b00] text-white font-black text-sm sm:text-base shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer">
                             <span>Anza usajili</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                        <button type="button"
+                                @click="admissionStep = 3; trackNumber = ''; trackResult = null; trackError = null; trackOtpError = null;"
+                                class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-blue-50 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 text-blue-700 font-bold text-sm sm:text-base shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer">
+                            <svg class="w-4 h-4 sm:w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                            <span>Fuatilia maombi</span>
                         </button>
                         <button type="button" 
                                 @click="closeAdmissionModal()" 
@@ -827,6 +841,187 @@
                                 @click="closeAdmissionModal()" 
                                 class="text-slate-400 hover:text-slate-700 font-bold underline shrink-0 cursor-pointer">
                             Endelea kutazama tovuti
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: TRACK APPLICATION FORM (IN-MODAL POP FORM) -->
+                <div x-show="admissionStep === 3" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     class="space-y-6">
+                    
+                    <!-- Top Action Bar -->
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <button type="button" 
+                                @click="admissionStep = 1" 
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                            <span>Rudi Nyuma (Back)</span>
+                        </button>
+
+                        <button type="button" 
+                                @click="closeAdmissionModal()" 
+                                class="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                                title="Funga (Close)">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Heading & Instructions Box -->
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
+                                Fuatilia Usajili (Track Application Status)
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-600 mt-1">
+                                Weka namba yako ya simu uliyosajilia au Control namba ili kuendelea na udahili.
+                            </p>
+                        </div>
+
+                        <!-- Prominent Instructions in Swahili -->
+                        <div class="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 text-xs sm:text-sm font-semibold leading-relaxed flex gap-3 items-start">
+                            <div class="p-1.5 rounded-xl bg-blue-600 text-white mt-0.5 shadow-md flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-blue-950 text-sm font-bold">Maelekezo / Instructions:</p>
+                                <p class="text-blue-900 font-extrabold text-[13px] sm:text-sm leading-relaxed">
+                                    Andika namba yako ya simu uliyosajilia au Control namba yako kuendelea na hatua zilizobaki ili kukamilisha usajili.
+                                </p>
+                                <p class="text-xs text-slate-550 font-medium italic">
+                                    (Enter the phone number you registered with or your Control number to continue with the remaining steps to complete your registration.)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Query Form -->
+                    <form @submit.prevent="
+                        trackLoading = true; trackError = null; trackResult = null; trackOtpError = null;
+                        axios.post('{{ url('/api/v1/public/track-application') }}', { application_number: trackNumber })
+                            .then(res => { trackResult = res.data; trackLoading = false; })
+                            .catch(err => { trackError = err.response?.data?.message || 'Hakuna maombi yaliyopatikana. (No active application record was found.)'; trackLoading = false; })
+                    " class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
+                                Namba ya Simu / Control Number
+                            </label>
+                            <div class="relative rounded-2xl shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                </div>
+                                <input type="text" x-model="trackNumber" required 
+                                       placeholder="Mfano: 0712345678 au 99123xxxxx" 
+                                       class="w-full pl-10 pr-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 font-black text-sm focus:border-amber-500 focus:bg-white focus:ring-4 focus:ring-amber-500/10 outline-none transition-all placeholder-slate-400">
+                            </div>
+                        </div>
+
+                        <button type="submit" :disabled="trackLoading" 
+                                class="w-full bg-gradient-to-r from-blue-900 to-indigo-950 hover:from-blue-800 hover:to-indigo-900 py-3.5 rounded-2xl text-white font-extrabold text-xs sm:text-sm shadow-xl flex items-center justify-center gap-2 transition-all hover:shadow-indigo-900/20 active:scale-[0.99] disabled:opacity-50 cursor-pointer">
+                            <span x-show="!trackLoading" class="flex items-center gap-1">Tafuta Maombi / Search &rarr;</span>
+                            <span x-show="trackLoading" x-cloak class="flex items-center gap-2">
+                                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Inatafuta...
+                            </span>
+                        </button>
+                    </form>
+
+                    <!-- Error Alert -->
+                    <div x-show="trackError" class="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-bold flex gap-2 items-center" x-cloak>
+                        <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span x-text="trackError"></span>
+                    </div>
+
+                    <!-- Result Card inside modal -->
+                    <div x-show="trackResult" class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4 text-left" x-cloak>
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                            <div>
+                                <span class="text-[9px] font-black text-slate-450 uppercase tracking-wider block">ID ya Maombi / Application ID</span>
+                                <span class="text-sm sm:text-base font-black text-blue-900" x-text="trackResult?.application_number"></span>
+                            </div>
+                            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase border"
+                                  :class="{ 
+                                      'bg-amber-50 text-amber-800 border-amber-200': trackResult?.status === 'Draft' || trackResult?.status === 'Pending Payment' || trackResult?.status === 'PAYMENT_PENDING' || trackResult?.status === 'IN_PROGRESS', 
+                                      'bg-emerald-50 text-emerald-800 border-emerald-200': trackResult?.status === 'Approved' || trackResult?.status === 'SUBMITTED' || trackResult?.status === 'Under Review', 
+                                      'bg-red-50 text-red-800 border-red-200': trackResult?.status === 'Rejected' || trackResult?.status === 'Expired' 
+                                  }"
+                                  x-text="trackResult?.status"></span>
+                        </div>
+
+                        <!-- Mini Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-slate-700">
+                            <div>
+                                <span class="text-slate-450 block text-[9px] uppercase font-black mb-0.5">Kozi / Programme</span>
+                                <span class="font-extrabold text-slate-900" x-text="trackResult?.programme"></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-450 block text-[9px] uppercase font-black mb-0.5">Malipo / Payment Status</span>
+                                <span class="font-black uppercase text-[10px] flex items-center gap-1" :class="trackResult?.payment_status === 'paid' ? 'text-emerald-600' : 'text-amber-500'">
+                                    <span class="w-1.5 h-1.5 rounded-full" :class="trackResult?.payment_status === 'paid' ? 'bg-emerald-500' : 'bg-amber-400'"></span>
+                                    <span x-text="trackResult?.payment_status === 'paid' ? 'Imelipwa (Paid)' : 'Haijalipwa (Pending)'"></span>
+                                </span>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <span class="text-slate-450 block text-[9px] uppercase font-black mb-0.5">Hatua Uliyofikia / Progress</span>
+                                <span class="font-extrabold text-slate-900" x-text="'Hatua ' + (trackResult?.current_step || 1) + ' (' + (trackResult?.completion_percentage || 0) + '%)'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-amber-500 to-emerald-500 h-full rounded-full transition-all duration-300"
+                                 :style="'width: ' + (trackResult?.completion_percentage || 0) + '%'"></div>
+                        </div>
+
+                        <!-- Incomplete Action Flow inside modal -->
+                        <template x-if="trackResult?.status === 'Draft' || trackResult?.status === 'IN_PROGRESS' || trackResult?.status === 'Pending Payment' || trackResult?.status === 'PAYMENT_PENDING'">
+                            <div class="border-t border-slate-200 pt-3 space-y-3">
+                                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-normal font-semibold">
+                                    ⚠️ <strong>Ombi halijakamilika (Application Incomplete).</strong> Bofya kitufe kilicho chini ili kuendelea na usajili mara moja.
+                                </div>
+                                <button @click="
+                                    trackOtpLoading = true; trackOtpError = null;
+                                    axios.post('{{ url('/api/v1/public/resume-direct') }}', { application_id: trackResult.application_id, user_id: trackResult.user_id })
+                                        .then(res => { window.location.href = res.data.redirect_url; })
+                                        .catch(err => { trackOtpError = err.response?.data?.message || 'Imeshindikana kuendelea na usajili. Jaribu tena baadae.'; trackOtpLoading = false; })
+                                " :disabled="trackOtpLoading" 
+                                        class="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-black py-3.5 rounded-2xl text-xs sm:text-sm shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <span x-show="!trackOtpLoading" class="flex items-center gap-1.5">🚀 Endelea na Usajili (Resume Registration)</span>
+                                    <span x-show="trackOtpLoading" x-cloak class="flex items-center gap-2">
+                                        <svg class="animate-spin h-4 w-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Inafungua...
+                                    </span>
+                                </button>
+                                <div x-show="trackOtpError" x-cloak class="p-2 bg-red-100 border border-red-200 text-red-800 rounded-xl text-[10px] font-bold" x-text="trackOtpError"></div>
+                            </div>
+                        </template>
+
+                        <!-- Completed Application Message -->
+                        <template x-if="trackResult?.status === 'Approved' || trackResult?.status === 'SUBMITTED' || trackResult?.status === 'Under Review'">
+                            <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-[11px] text-emerald-900 leading-normal font-semibold">
+                                🎉 <strong>Ombi lako limepokelewa kikamilifu (Submitted).</strong> Hakuna hatua za ziada. Tafadhali subiri mrejesho wa udahili.
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Footer Guidance -->
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-end text-[11px] sm:text-xs">
+                        <button type="button" 
+                                @click="closeAdmissionModal()" 
+                                class="text-slate-400 hover:text-slate-700 font-bold underline cursor-pointer">
+                            Funga na uendelee na tovuti
                         </button>
                     </div>
                 </div>

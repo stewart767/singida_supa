@@ -87,6 +87,7 @@
                         <option value="Draft" {{ ($filters['status'] ?? '') === 'Draft' ? 'selected' : '' }}>Draft</option>
                         <option value="Pending Payment" {{ ($filters['status'] ?? '') === 'Pending Payment' ? 'selected' : '' }}>Pending Payment</option>
                         <option value="Under Review" {{ ($filters['status'] ?? '') === 'Under Review' ? 'selected' : '' }}>Under Review</option>
+                        <option value="Pending" {{ ($filters['status'] ?? '') === 'Pending' ? 'selected' : '' }}>Pending (All)</option>
                         <option value="Approved" {{ ($filters['status'] ?? '') === 'Approved' ? 'selected' : '' }}>Approved</option>
                         <option value="Rejected" {{ ($filters['status'] ?? '') === 'Rejected' ? 'selected' : '' }}>Rejected</option>
                     </select>
@@ -138,12 +139,18 @@
 
                 <!-- Export PDF & CSV Actions -->
                 <div class="flex items-center space-x-2">
-                    <a href="{{ route('admin.reports.pdf', ['type' => 'applications', 'download' => 1]) }}" target="_blank" class="px-5 py-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all">
+                    @if(auth()->user()->hasPermissionTo('download_reports'))
+                    <a href="{{ route('admin.reports.pdf', array_merge(['type' => 'applications', 'download' => 1], request()->query())) }}" target="_blank" class="px-5 py-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 transition-all">
                         📄 Download PDF Report (With Logo)
                     </a>
-                    <a href="{{ url('/api/v1/admin/export-report?type=applications') }}" target="_blank" class="px-4 py-2 rounded-2xl bg-white hover:bg-slate-800 text-slate-800 hover:text-white border border-slate-200 font-extrabold text-xs shadow-md flex items-center gap-2">
+                    <a href="{{ url('/api/v1/admin/export-report?' . http_build_query(array_merge(['type' => 'applications'], request()->query()))) }}" target="_blank" class="px-4 py-2 rounded-2xl bg-white hover:bg-slate-800 text-slate-800 hover:text-white border border-slate-200 font-extrabold text-xs shadow-md flex items-center gap-2">
                         📊 Export CSV
                     </a>
+                    @else
+                    <span class="text-xs text-slate-400 font-bold italic flex items-center gap-1">
+                        🔒 Downloads Disabled (Requires permission)
+                    </span>
+                    @endif
                 </div>
             </div>
 
