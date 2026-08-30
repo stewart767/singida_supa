@@ -119,7 +119,7 @@ class SingidaAdmissionClient
             return null;
         }
 
-        $url = rtrim((string) config('services.singida.base_url'), '/').'/api/integration/supa/payment-status';
+        $url = rtrim((string) config('services.singida.base_url'), '/').'/api/integration/supa/admissions';
         $token = (string) config('services.singida.api_token');
 
         try {
@@ -136,7 +136,11 @@ class SingidaAdmissionClient
 
             if ($response->successful()) {
                 $json = $response->json();
-                return is_array($json['data'] ?? null) ? $json['data'] : $json;
+                $data = $json['data'] ?? null;
+                if (is_array($data)) {
+                    return isset($data[0]) ? $data[0] : null;
+                }
+                return is_array($json) ? $json : null;
             }
         } catch (\Throwable $e) {
             Log::debug('SingidaAdmissionClient: payment status check skipped/failed: '.$e->getMessage());

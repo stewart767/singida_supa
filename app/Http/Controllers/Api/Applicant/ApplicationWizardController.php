@@ -231,8 +231,8 @@ class ApplicationWizardController extends Controller
                 );
 
                 if ($singidaStatus && (
-                    ($singidaStatus['status'] ?? '') === 'paid' ||
-                    ($singidaStatus['payment_status'] ?? '') === 'paid' ||
+                    in_array(strtolower($singidaStatus['status'] ?? ''), ['paid', 'completed', 'verified'], true) ||
+                    in_array(strtolower($singidaStatus['payment_status'] ?? ''), ['paid', 'completed', 'verified'], true) ||
                     ($singidaStatus['is_paid'] ?? false) === true
                 )) {
                     $payment->update([
@@ -243,8 +243,13 @@ class ApplicationWizardController extends Controller
                         'singida_synced' => true,
                     ]);
 
-                    if (in_array($application->status, ['Draft', 'Pending Payment'], true)) {
-                        $application->update(['status' => 'Under Review']);
+                    if (in_array($application->status, ['Draft', 'Pending Payment', 'PAYMENT_PENDING'], true)) {
+                        $application->update([
+                            'status' => 'IN_PROGRESS',
+                            'current_step' => max($application->current_step, 6),
+                            'completion_percentage' => max($application->completion_percentage, 71),
+                            'last_activity_at' => now(),
+                        ]);
                     }
                 }
             } catch (\Throwable $e) {
