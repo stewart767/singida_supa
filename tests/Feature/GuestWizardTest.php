@@ -88,6 +88,7 @@ class GuestWizardTest extends TestCase
             'voter_id_number' => 'T-9999-8888-777',
             'region' => 'Singida',
             'district' => 'Singida Manispaa',
+            'ward' => 'Majengo',
             'next_of_kin_name' => 'Kin Person',
             'next_of_kin_phone' => '+255755123456',
             'next_of_kin_relation' => 'Mother',
@@ -216,6 +217,7 @@ class GuestWizardTest extends TestCase
             'nida_number' => '20000101123450000112',
             'region' => 'Singida',
             'district' => 'Singida',
+            'ward' => 'Majengo',
             'next_of_kin_name' => 'Kin Person',
             'next_of_kin_phone' => '+255711223344',
             'next_of_kin_relation' => 'Father'

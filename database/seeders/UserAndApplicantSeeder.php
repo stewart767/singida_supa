@@ -139,7 +139,9 @@ class UserAndApplicantSeeder extends Seeder
                 'nida_number' => '20020820123450000223',
                 'region' => 'Arusha',
                 'district' => 'Arusha Urban',
+                'ward' => 'Kati',
                 'next_of_kin_name' => 'Charles Mwangi',
+
                 'next_of_kin_phone' => '+255755200201',
                 'next_of_kin_relation' => 'Father',
             ]

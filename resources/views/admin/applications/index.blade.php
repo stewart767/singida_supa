@@ -18,8 +18,12 @@
             admission_category: 'Direct Entry',
             status: 'Approved',
             gender: 'male',
-            date_of_birth: ''
+            date_of_birth: '',
+            region: '',
+            district: '',
+            ward: ''
         },
+
 
         toggleSelectAll() {
             this.selectAll = !this.selectAll;
@@ -368,6 +372,22 @@
                             <option value="Foundation">Foundation</option>
                         </select>
                     </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Region (Mkoa)</label>
+                        <input type="text" x-model="newStudent.region" placeholder="e.g. Singida, Dar es Salaam" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">District (Halmashauri)</label>
+                        <input type="text" x-model="newStudent.district" placeholder="e.g. Singida Mjini, Ilala" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Ward (Kata)</label>
+                        <input type="text" x-model="newStudent.ward" placeholder="e.g. Ipembe, Kariakoo" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+
 
                     <div class="col-span-2">
                         <label class="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Admission Status *</label>

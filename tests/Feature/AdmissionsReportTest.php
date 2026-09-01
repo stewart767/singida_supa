@@ -114,4 +114,51 @@ class AdmissionsReportTest extends TestCase
         $response2->assertSee('Custom (2026-08-25 to 2026-08-25)');
         $response2->assertSee('New (Custom Period): <strong>0</strong>', false);
     }
+
+    public function test_admin_can_store_application_with_location_details()
+    {
+        $adminUser = User::where('email', 'admin@supa.ac.tz')->first();
+        $this->actingAs($adminUser);
+
+        $programme = Programme::first();
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+
+        $response = $this->postJson('/admin/applications', [
+            'name' => 'John Tesha',
+            'email' => 'john.tesha@test.com',
+            'phone' => '+255711999888',
+            'gender' => 'male',
+            'date_of_birth' => '2000-01-01',
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+            'status' => 'Approved',
+            'region' => 'Singida',
+            'district' => 'Singida Mjini',
+            'ward' => 'Ipembe',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('applicants', [
+            'region' => 'Singida',
+            'district' => 'Singida Mjini',
+            'ward' => 'Ipembe',
+        ]);
+    }
+
+    public function test_admissions_report_does_not_contain_unknown_region_district_or_ward()
+    {
+        $adminUser = User::where('email', 'admin@supa.ac.tz')->first();
+        $this->actingAs($adminUser);
+
+        $response = $this->get('/admin/reports/pdf?type=admissions_report');
+        $response->assertStatus(200);
+        $response->assertDontSee('UNKNOWN REGION');
+        $response->assertDontSee('UNKNOWN DISTRICT');
+        $response->assertDontSee('UNKNOWN WARD');
+    }
 }
+

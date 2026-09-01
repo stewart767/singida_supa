@@ -75,6 +75,9 @@ class AdminWebController extends Controller
             'status' => ['required', 'string', 'in:Draft,Pending Payment,Under Review,Verified,Approved,Rejected,Waitlist'],
             'gender' => ['required', 'string', 'in:male,female,other'],
             'date_of_birth' => ['required', 'date'],
+            'region' => ['nullable', 'string', 'max:100'],
+            'district' => ['nullable', 'string', 'max:100'],
+            'ward' => ['nullable', 'string', 'max:100'],
         ]);
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $request) {
@@ -98,7 +101,11 @@ class AdminWebController extends Controller
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'],
                 'whatsapp_number' => $validated['phone'],
+                'region' => $validated['region'] ?? null,
+                'district' => $validated['district'] ?? null,
+                'ward' => $validated['ward'] ?? null,
             ]);
+
 
             $year = date('Y');
             $count = Application::whereYear('created_at', $year)->count() + 1;
@@ -1460,6 +1467,8 @@ class AdminWebController extends Controller
             // 2. Regional Performance
             $regionalRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->whereNotNull('applicants.region')
+                ->where('applicants.region', '!=', '')
                 ->select('applicants.region', \Illuminate\Support\Facades\DB::raw('count(applications.id) as count'))
                 ->groupBy('applicants.region')
                 ->orderBy('count', 'desc')
@@ -1467,7 +1476,7 @@ class AdminWebController extends Controller
 
             $regionalPerformance = [];
             foreach ($regionalRaw as $item) {
-                $regionName = $item->region ? trim($item->region) : 'Unknown Region';
+                $regionName = trim($item->region);
                 $percentage = $newTotal > 0 ? round(($item->count / $newTotal) * 100, 1) : 0;
                 $regionalPerformance[] = [
                     'name' => $regionName,
@@ -1479,6 +1488,8 @@ class AdminWebController extends Controller
             // 3. All Districts
             $districtsRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->whereNotNull('applicants.district')
+                ->where('applicants.district', '!=', '')
                 ->select('applicants.district', \Illuminate\Support\Facades\DB::raw('count(applications.id) as count'))
                 ->groupBy('applicants.district')
                 ->orderBy('count', 'desc')
@@ -1486,7 +1497,7 @@ class AdminWebController extends Controller
 
             $districtsPerformance = [];
             foreach ($districtsRaw as $item) {
-                $districtName = $item->district ? trim($item->district) : 'Unknown District';
+                $districtName = trim($item->district);
                 $districtsPerformance[] = [
                     'name' => $districtName,
                     'count' => $item->count,
@@ -1496,6 +1507,8 @@ class AdminWebController extends Controller
             // 4. Wards with Admissions
             $wardsRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
+                ->whereNotNull('applicants.ward')
+                ->where('applicants.ward', '!=', '')
                 ->select('applicants.ward', \Illuminate\Support\Facades\DB::raw('count(applications.id) as count'))
                 ->groupBy('applicants.ward')
                 ->orderBy('count', 'desc')
@@ -1503,7 +1516,7 @@ class AdminWebController extends Controller
 
             $wardsPerformance = [];
             foreach ($wardsRaw as $item) {
-                $wardName = $item->ward ? trim($item->ward) : 'Unknown Ward';
+                $wardName = trim($item->ward);
                 $wardsPerformance[] = [
                     'name' => $wardName,
                     'count' => $item->count,
@@ -1514,6 +1527,8 @@ class AdminWebController extends Controller
             $ratesRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
                 ->leftJoin('payments', 'applications.id', '=', 'payments.application_id')
+                ->whereNotNull('applicants.region')
+                ->where('applicants.region', '!=', '')
                 ->select(
                     'applicants.region',
                     \Illuminate\Support\Facades\DB::raw('count(applications.id) as enrolled'),
@@ -1524,7 +1539,7 @@ class AdminWebController extends Controller
 
             $paymentRates = [];
             foreach ($ratesRaw as $item) {
-                $regionName = $item->region ? trim($item->region) : 'Unknown Region';
+                $regionName = trim($item->region);
                 $enrolled = (int) $item->enrolled;
                 $paid = (int) $item->paid;
                 $percentage = $enrolled > 0 ? round(($paid / $enrolled) * 100, 1) : 0;
@@ -1536,6 +1551,7 @@ class AdminWebController extends Controller
                     'percentage' => $percentage,
                 ];
             }
+
 
             // Sort payment rates by percentage desc, then enrolled desc, and take top 20
             usort($paymentRates, function ($a, $b) {

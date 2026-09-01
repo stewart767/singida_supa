@@ -29,7 +29,8 @@ class StorePersonalInformationRequest extends FormRequest
             'whatsapp_number' => ['nullable', 'string', 'max:20'],
             'region' => ['required', 'string', 'max:100'],
             'district' => ['required', 'string', 'max:100'],
-            'ward' => ['nullable', 'string', 'max:100'],
+            'ward' => ['required', 'string', 'max:100'],
+
             'nationality' => ['nullable', 'string', 'max:100'],
             'next_of_kin_name' => ['nullable', 'string', 'max:255'],
             'next_of_kin_phone' => ['nullable', 'string', 'max:20'],

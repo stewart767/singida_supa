@@ -1290,14 +1290,15 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-extrabold text-slate-700 uppercase mb-2">Kata</label>
-                            <select x-model="personal.ward" :disabled="!personal.district" class="w-full px-4 py-3.5 rounded-2xl border border-slate-300 bg-slate-50 text-slate-900 text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
+                            <label class="block text-xs font-extrabold text-slate-700 uppercase mb-2">Kata <span class="text-red-500">*</span></label>
+                            <select x-model="personal.ward" required :disabled="!personal.district" class="w-full px-4 py-3.5 rounded-2xl border border-slate-300 bg-slate-50 text-slate-900 text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50">
                                 <option value="">Chagua Kata</option>
                                 <template x-for="w in (tanzaniaWards[personal.district] || [])" :key="w">
                                     <option :value="w" x-text="w"></option>
                                 </template>
                             </select>
                         </div>
+
                     </div>
 
                     <div class="flex justify-between items-center pt-4">
