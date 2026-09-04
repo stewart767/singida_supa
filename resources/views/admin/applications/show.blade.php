@@ -84,23 +84,6 @@
                 this.syncingSingida = false;
                 toast(err.response?.data?.message || 'Failed to sync with Singida.', 'error');
             });
-        },
-
-        verifyingPayment: false,
-        verifyPayment(paymentId, status) {
-            this.verifyingPayment = true;
-            axios.post('{{ url('/api/v1/admin/payments') }}/' + paymentId + '/verify', {
-                status: status
-            })
-            .then(res => {
-                this.verifyingPayment = false;
-                toast('Payment marked as ' + status.toUpperCase() + '!', 'success');
-                setTimeout(() => window.location.reload(), 800);
-            })
-            .catch(err => {
-                this.verifyingPayment = false;
-                toast(err.response?.data?.message || 'Error verifying payment', 'error');
-            });
         }
     }">
 
@@ -419,11 +402,11 @@
             @endif
         </div>
 
-        <!-- PAYMENT SLIP & CONTROL NUMBER VERIFICATION CARD -->
+        <!-- PAYMENT SLIP & CONTROL NUMBER STATUS CARD -->
         <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-4">
             <h3 class="font-extrabold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center justify-between">
                 <span class="flex items-center gap-2">
-                    <span class="text-emerald-500">💳</span> Application Fee Payment Verification
+                    <span class="text-emerald-500">💳</span> Application Fee Payment & Control Number Status
                 </span>
                 <span class="px-3.5 py-1 rounded-full text-xs font-black uppercase {{ ($application->payment->payment_status ?? '') === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
                     {{ strtoupper($application->payment->payment_status ?? 'Pending') }}
@@ -453,13 +436,12 @@
 
                     <div class="p-5 rounded-2xl bg-white border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                            <span class="text-xs font-extrabold text-slate-900 block">Risiti ya Malipo (Uploaded Receipt Slip)</span>
+                            <span class="text-xs font-extrabold text-slate-900 block">Gateway Payment Status</span>
+                            <span class="text-[11px] text-slate-500 font-semibold block mt-0.5">Automated detection via Singida / NMB Banking Gateway</span>
                             @if($application->payment->receipt_path)
-                                <a href="{{ asset('storage/' . $application->payment->receipt_path) }}" target="_blank" class="text-xs text-blue-500 hover:underline font-bold block mt-1">
+                                <a href="{{ asset('storage/' . $application->payment->receipt_path) }}" target="_blank" class="text-xs text-blue-500 hover:underline font-bold block mt-2">
                                     📄 Fungua / Pakua Faili la Risiti (View Payment Receipt File)
                                 </a>
-                            @else
-                                <span class="text-xs text-amber-500 font-bold block mt-1">⚠️ Risiti haijapakiwa bado</span>
                             @endif
                         </div>
                         <div class="flex items-center gap-2">
@@ -470,15 +452,13 @@
                                 </button>
                             @endif
 
-                            @if($application->payment->payment_status !== 'paid')
-                                <button type="button" @click="verifyPayment({{ $application->payment->id }}, 'paid')" :disabled="verifyingPayment"
-                                        class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shrink-0 disabled:opacity-60">
-                                    <span x-show="!verifyingPayment">✓ Verify Paid (Allow Certificates)</span>
-                                    <span x-show="verifyingPayment">Verifying...</span>
-                                </button>
+                            @if($application->payment->payment_status === 'paid')
+                                <span class="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold text-xs flex items-center gap-1.5 shadow-sm">
+                                    <span class="text-emerald-600 font-black">✓</span> Auto-Verified via Banking Gateway
+                                </span>
                             @else
-                                <span class="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold text-xs">
-                                    ✓ Payment Verified
+                                <span class="px-4 py-2 rounded-xl bg-amber-100 text-amber-900 font-extrabold text-xs flex items-center gap-1.5 shadow-sm">
+                                    <span class="text-amber-600 font-black">⏳</span> Awaiting Payment Detection
                                 </span>
                             @endif
                         </div>

@@ -41,23 +41,8 @@ class PaymentManagementController extends Controller
 
     public function verify(Request $request, Payment $payment): JsonResponse
     {
-        $this->authorize('verify', $payment);
-
-        $request->validate([
-            'status' => ['required', 'in:paid,rejected'],
-            'rejection_reason' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $verifiedPayment = $this->paymentService->verifyPayment(
-            $payment,
-            Auth::user(),
-            $request->status,
-            $request->rejection_reason
-        );
-
         return response()->json([
-            'message' => "Payment marked as {$request->status}.",
-            'payment' => new PaymentResource($verifiedPayment),
-        ]);
+            'message' => 'Manual payment verification is disabled. Payments are automatically verified via the banking gateway.',
+        ], 403);
     }
 }

@@ -1,6 +1,6 @@
-<x-app-layout title="{{ request()->get('view') === 'control_numbers' ? 'Government Control Numbers Desk' : 'Payment Verification & Control Numbers Desk' }}">
+<x-app-layout title="{{ request()->get('view') === 'control_numbers' ? 'Government Control Numbers Desk' : 'Payments & Government Control Numbers Desk' }}">
     <x-slot name="header">
-        {{ request()->get('view') === 'control_numbers' ? 'Government Control Numbers Desk' : 'Finance & Government Control Numbers Desk (CRUD)' }}
+        {{ request()->get('view') === 'control_numbers' ? 'Government Control Numbers Desk' : 'Finance & Government Control Numbers Desk' }}
     </x-slot>
 
     <div class="w-full space-y-8" x-data="{
@@ -73,38 +73,12 @@
         },
 
         updatePayment() {
-            const status = this.editPaymentData.payment_status;
-            axios.post('{{ url('/api/v1/admin/payments') }}/' + this.editPaymentData.id + '/verify', {
-                status: status === 'paid' ? 'paid' : 'rejected'
-            })
-            .then(res => {
-                const idx = this.paymentsList.findIndex(p => p.id === this.editPaymentData.id);
-                if (idx !== -1) {
-                    if (status === 'paid' && (!this.paymentsList[idx].paid_at || this.paymentsList[idx].paid_at === '-')) {
-                        this.editPaymentData.paid_at = new Date().toLocaleString();
-                    }
-                    this.paymentsList[idx] = { ...this.editPaymentData };
-                    toast('Payment status updated to ' + status.toUpperCase(), 'success');
-                }
-                this.showEditModal = false;
-            })
-            .catch(err => {
-                toast(err.response?.data?.message || 'Error updating payment', 'error');
-            });
-        },
-
-        markAsPaid(p) {
-            axios.post('{{ url('/api/v1/admin/payments') }}/' + p.id + '/verify', {
-                status: 'paid'
-            })
-            .then(res => {
-                p.payment_status = 'paid';
-                p.paid_at = new Date().toLocaleString();
-                toast('Control # ' + p.control_number + ' verified as PAID!', 'success');
-            })
-            .catch(err => {
-                toast(err.response?.data?.message || 'Error verifying payment', 'error');
-            });
+            const idx = this.paymentsList.findIndex(p => p.id === this.editPaymentData.id);
+            if (idx !== -1) {
+                this.paymentsList[idx] = { ...this.editPaymentData };
+                toast('Payment details updated successfully.', 'success');
+            }
+            this.showEditModal = false;
         },
 
         confirmDelete(p) {
@@ -169,7 +143,7 @@
                         <th class="py-3.5 px-4">Method</th>
                         <th class="py-3.5 px-4">Status</th>
                         <th class="py-3.5 px-4">Paid Timestamp</th>
-                        <th class="py-3.5 px-4 text-right">Actions (CRUD)</th>
+                        <th class="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 font-semibold">
@@ -188,9 +162,6 @@
                             </td>
                             <td class="py-4 px-4 text-[10px] text-slate-500 font-bold" x-text="p.paid_at"></td>
                             <td class="py-4 px-4 text-right space-x-1">
-                                <button x-show="p.payment_status !== 'paid'" @click="markAsPaid(p)" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] transition-all">
-                                    Verify Paid
-                                </button>
                                 <button @click="openEdit(p)" class="px-3 py-1.5 rounded-xl bg-blue-600/10 text-blue-600 hover:bg-blue-600 hover:text-white font-extrabold text-[10px] transition-all">
                                     Edit
                                 </button>
@@ -264,13 +235,20 @@
                         <input type="number" x-model="editPaymentData.amount" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold">
                     </div>
                     <div>
-                        <label class="block font-extrabold uppercase mb-1">Status</label>
-                        <select x-model="editPaymentData.payment_status" class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold">
-                            <option value="pending">Pending</option>
-                            <option value="paid">Paid</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
+                        <label class="block font-extrabold uppercase mb-1">Payment Status</label>
+                        <input type="text" x-model="editPaymentData.payment_status" readonly class="w-full p-3 rounded-2xl border border-slate-300 bg-slate-100 font-bold uppercase text-xs text-slate-600">
                     </div>
+                </div>
+
+                <div>
+                    <label class="block font-extrabold uppercase mb-1 text-xs">Payment Method</label>
+                    <select x-model="editPaymentData.payment_method" class="w-full p-3.5 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-bold">
+                        <option value="M-Pesa">M-Pesa Mobile Money</option>
+                        <option value="TigoPesa">TigoPesa Mobile Money</option>
+                        <option value="Airtel Money">Airtel Money</option>
+                        <option value="CRDB Bank">CRDB Bank Branch</option>
+                        <option value="NMB Bank">NMB Bank Branch</option>
+                    </select>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4">
