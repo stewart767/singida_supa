@@ -107,6 +107,12 @@ Route::middleware(['auth', \App\Http\Middleware\AdminPermissionMiddleware::class
     Route::get('/applications', [AdminWebController::class, 'applications'])->name('admin.applications.index');
     Route::post('/applications', [AdminWebController::class, 'storeApplication'])->name('admin.applications.store');
     Route::get('/applications/{application}', [AdminWebController::class, 'showApplication'])->name('admin.applications.show');
+    Route::get('/applications/{application}/edit', [AdminWebController::class, 'editApplication'])->name('admin.applications.edit');
+    Route::put('/applications/{application}', [AdminWebController::class, 'updateApplication'])->name('admin.applications.update');
+    Route::post('/applications/{application}/update', [AdminWebController::class, 'updateApplication']);
+    Route::post('/applications/{application}/documents', [AdminWebController::class, 'uploadApplicationDocument'])->name('admin.applications.documents.store');
+    Route::post('/documents/{document}/replace', [AdminWebController::class, 'replaceApplicationDocument'])->name('admin.documents.replace');
+    Route::delete('/documents/{document}', [AdminWebController::class, 'deleteApplicationDocument'])->name('admin.documents.destroy');
     Route::get('/payments', [AdminWebController::class, 'payments'])->name('admin.payments.index');
     Route::get('/programmes', [AdminWebController::class, 'programmes'])->name('admin.programmes.index');
     Route::post('/programmes', [AdminWebController::class, 'storeProgramme'])->name('admin.programmes.store');

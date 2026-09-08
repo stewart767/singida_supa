@@ -3,17 +3,27 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcademicProfile;
+use App\Models\AcademicYear;
+use App\Models\Applicant;
 use App\Models\Application;
+use App\Models\ApplicationActivity;
+use App\Models\ApplicationDocument;
 use App\Models\AuditLog;
 use App\Models\Contact;
+use App\Models\Intake;
 use App\Models\News;
 use App\Models\Payment;
 use App\Models\Programme;
 use App\Models\Setting;
 use App\Models\User;
 use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Services\AdmissionCategoryCalculatorService;
+use App\Services\AuditLogService;
 use App\Services\ReportExporterService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -40,8 +50,8 @@ class AdminWebController extends Controller
         $applications = $this->applicationRepo->getFilteredApplications($filters);
 
         $programmes = Programme::orderBy('name')->get();
-        $academicYears = \App\Models\AcademicYear::where('is_active', true)->get();
-        $intakes = \App\Models\Intake::where('is_active', true)->get();
+        $academicYears = AcademicYear::where('is_active', true)->get();
+        $intakes = Intake::where('is_active', true)->get();
 
         $stats = [
             'total' => Application::count(),
@@ -59,6 +69,376 @@ class AdminWebController extends Controller
             $q->orderBy('created_at', 'desc');
         }]);
         return view('admin.applications.show', compact('application'));
+    }
+
+    public function editApplication(Application $application)
+    {
+        $application->load([
+            'applicant.user',
+            'academicProfile',
+            'documents',
+            'programme',
+            'academicYear',
+            'intake',
+            'payment'
+        ]);
+
+        $programmes = Programme::orderBy('name')->get();
+        $academicYears = AcademicYear::where('is_active', true)->get();
+        $intakes = Intake::where('is_active', true)->get();
+
+        return view('admin.applications.edit', compact('application', 'programmes', 'academicYears', 'intakes'));
+    }
+
+    public function updateApplication(Request $request, Application $application, AdmissionCategoryCalculatorService $categoryCalculator)
+    {
+        $application->load(['applicant.user', 'academicProfile']);
+        $user = $application->applicant?->user;
+        $userId = $user ? $user->id : null;
+
+        $validated = $request->validate([
+            // Personal & Contact
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255' . ($userId ? '|unique:users,email,' . $userId : ''),
+            'phone' => 'required|string|max:25' . ($userId ? '|unique:users,phone,' . $userId : ''),
+            'gender' => 'required|in:male,female,other',
+            'date_of_birth' => 'nullable|date',
+            'nida_number' => 'nullable|string|max:50',
+            'voter_id_number' => 'nullable|string|max:50',
+            'work_id_number' => 'nullable|string|max:50',
+            'whatsapp_number' => 'nullable|string|max:25',
+            'region' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'ward' => 'nullable|string|max:100',
+            'nationality' => 'nullable|string|max:100',
+            'next_of_kin_name' => 'nullable|string|max:255',
+            'next_of_kin_phone' => 'nullable|string|max:25',
+            'next_of_kin_relation' => 'nullable|string|max:100',
+            'passport_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+
+            // Application details
+            'programme_id' => 'required|exists:programmes,id',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'intake_id' => 'nullable|exists:intakes,id',
+            'admission_type' => 'required|in:Diploma,Form Six',
+            'status' => 'nullable|in:Draft,Pending Payment,Under Review,Approved,Rejected,Waitlist',
+            'rejection_reason' => 'nullable|string|max:1000',
+
+            // Academic Profile - Diploma
+            'college_name' => 'nullable|string|max:255',
+            'diploma_programme_name' => 'nullable|string|max:255',
+            'diploma_registration_number' => 'nullable|string|max:100',
+            'diploma_graduation_year' => 'nullable|integer|min:1990|max:' . date('Y'),
+            'gpa' => 'nullable|numeric|min:0|max:5',
+
+            // Academic Profile - Form Six
+            'csee_number' => 'nullable|string|max:50',
+            'csee_year' => 'nullable|integer|min:1990|max:' . date('Y'),
+            'csee_school' => 'nullable|string|max:255',
+            'acsee_number' => 'nullable|string|max:50',
+            'acsee_year' => 'nullable|integer|min:1990|max:' . date('Y'),
+            'acsee_school' => 'nullable|string|max:255',
+            'acsee_combination' => 'nullable|string|max:50',
+            'acsee_subject1' => 'nullable|string|max:100',
+            'acsee_subject2' => 'nullable|string|max:100',
+            'acsee_subject3' => 'nullable|string|max:100',
+            'acsee_grade1' => 'nullable|string|max:5',
+            'acsee_grade2' => 'nullable|string|max:5',
+            'acsee_grade3' => 'nullable|string|max:5',
+            'acsee_gs_grade' => 'nullable|string|max:5',
+            'acsee_points' => 'nullable|numeric|min:1|max:35',
+        ]);
+
+        DB::transaction(function () use ($request, $application, $validated, $categoryCalculator) {
+            $applicant = $application->applicant;
+            $user = $applicant?->user;
+
+            // 1. Update User
+            if ($user) {
+                $user->update([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'],
+                ]);
+            }
+
+            // 2. Update Passport photo if provided
+            $passportPath = $applicant?->passport_photo_path;
+            if ($request->hasFile('passport_photo')) {
+                $passportPath = $request->file('passport_photo')->store('passports', 'public');
+            }
+
+            // 3. Update Applicant profile
+            if ($applicant) {
+                $applicant->update([
+                    'gender' => $validated['gender'],
+                    'date_of_birth' => $validated['date_of_birth'] ?? null,
+                    'nida_number' => $validated['nida_number'] ?? null,
+                    'voter_id_number' => $validated['voter_id_number'] ?? null,
+                    'work_id_number' => $validated['work_id_number'] ?? null,
+                    'whatsapp_number' => $validated['whatsapp_number'] ?? null,
+                    'region' => $validated['region'] ?? null,
+                    'district' => $validated['district'] ?? null,
+                    'ward' => $validated['ward'] ?? null,
+                    'nationality' => $validated['nationality'] ?? 'Tanzanian',
+                    'next_of_kin_name' => $validated['next_of_kin_name'] ?? null,
+                    'next_of_kin_phone' => $validated['next_of_kin_phone'] ?? null,
+                    'next_of_kin_relation' => $validated['next_of_kin_relation'] ?? null,
+                    'passport_photo_path' => $passportPath,
+                ]);
+            }
+
+            // 4. Calculate Admission Category based on input
+            $admissionType = $validated['admission_type'];
+            $gpa = isset($validated['gpa']) ? (float) $validated['gpa'] : null;
+            $points = isset($validated['acsee_points']) ? (float) $validated['acsee_points'] : null;
+            $g1 = $validated['acsee_grade1'] ?? null;
+            $g2 = $validated['acsee_grade2'] ?? null;
+            $g3 = $validated['acsee_grade3'] ?? null;
+
+            // Calculate points automatically if individual grades are present
+            if ($admissionType === 'Form Six' && ($g1 || $g2 || $g3)) {
+                $gradePointMap = ['A' => 5, 'B' => 4, 'C' => 3, 'D' => 2, 'E' => 1, 'S' => 0.5, 'F' => 0];
+                $calcPoints = 0;
+                if ($g1 && isset($gradePointMap[strtoupper($g1)])) $calcPoints += $gradePointMap[strtoupper($g1)];
+                if ($g2 && isset($gradePointMap[strtoupper($g2)])) $calcPoints += $gradePointMap[strtoupper($g2)];
+                if ($g3 && isset($gradePointMap[strtoupper($g3)])) $calcPoints += $gradePointMap[strtoupper($g3)];
+                if ($calcPoints > 0) {
+                    $points = $calcPoints;
+                }
+            }
+
+            $calculatedCategory = $categoryCalculator->calculate($admissionType, $gpa, $points, $g1, $g2, $g3);
+
+            // 5. Update Application details
+            $applicationData = [
+                'programme_id' => $validated['programme_id'],
+                'academic_year_id' => $validated['academic_year_id'] ?? $application->academic_year_id,
+                'intake_id' => $validated['intake_id'] ?? $application->intake_id,
+                'admission_type' => $admissionType,
+                'admission_category' => $calculatedCategory,
+                'rejection_reason' => $validated['rejection_reason'] ?? null,
+            ];
+
+            if (!empty($validated['status'])) {
+                $applicationData['status'] = $validated['status'];
+                if ($validated['status'] === 'Approved') {
+                    $applicationData['reviewed_by'] = Auth::id();
+                    $applicationData['reviewed_at'] = now();
+
+                    // Generate admission letter if not present
+                    if (!$application->admissionLetter) {
+                        $seqNumber = str_pad((string) (\App\Models\AdmissionLetter::count() + 1), 4, '0', STR_PAD_LEFT);
+                        $admNumber = 'SUPA/ADM/' . date('Y') . '/' . $seqNumber;
+                        $verificationCode = strtoupper(Str::random(16));
+
+                        \App\Models\AdmissionLetter::create([
+                            'application_id' => $application->id,
+                            'admission_number' => $admNumber,
+                            'verification_code' => $verificationCode,
+                            'qr_code_hash' => hash('sha256', $admNumber . '|' . $verificationCode),
+                            'reporting_date' => now()->addMonths(1),
+                            'generated_by' => Auth::id(),
+                            'generated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+
+            $application->update($applicationData);
+
+            // 6. Update or Create Academic Profile
+            $academicData = [
+                'admission_type' => $admissionType,
+                'college_name' => $validated['college_name'] ?? null,
+                'diploma_programme_name' => $validated['diploma_programme_name'] ?? null,
+                'diploma_registration_number' => $validated['diploma_registration_number'] ?? null,
+                'diploma_graduation_year' => $validated['diploma_graduation_year'] ?? null,
+                'gpa' => $gpa,
+                'csee_number' => $validated['csee_number'] ?? null,
+                'csee_year' => $validated['csee_year'] ?? null,
+                'csee_school' => $validated['csee_school'] ?? null,
+                'acsee_number' => $validated['acsee_number'] ?? null,
+                'acsee_year' => $validated['acsee_year'] ?? null,
+                'acsee_school' => $validated['acsee_school'] ?? null,
+                'acsee_combination' => $validated['acsee_combination'] ?? null,
+                'acsee_subject1' => $validated['acsee_subject1'] ?? null,
+                'acsee_subject2' => $validated['acsee_subject2'] ?? null,
+                'acsee_subject3' => $validated['acsee_subject3'] ?? null,
+                'acsee_grade1' => $g1 ? strtoupper($g1) : null,
+                'acsee_grade2' => $g2 ? strtoupper($g2) : null,
+                'acsee_grade3' => $g3 ? strtoupper($g3) : null,
+                'acsee_gs_grade' => !empty($validated['acsee_gs_grade']) ? strtoupper($validated['acsee_gs_grade']) : null,
+                'acsee_points' => $points,
+            ];
+
+            AcademicProfile::updateOrCreate(
+                ['application_id' => $application->id],
+                $academicData
+            );
+
+            // 7. Activity Log & Audit
+            ApplicationActivity::create([
+                'application_id' => $application->id,
+                'action' => 'Admin Updated Information',
+                'description' => 'Administrator updated applicant profile and academic information.',
+            ]);
+
+            AuditLogService::log(
+                'student_profile_updated_by_admin',
+                "Administrator updated information for application {$application->application_number} (Student: {$validated['name']})"
+            );
+        });
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Student information updated successfully.',
+                'application' => $application->fresh(['applicant.user', 'academicProfile', 'programme']),
+            ]);
+        }
+
+        return redirect()->route('admin.applications.show', $application->id)->with('success', 'Student information and academic details updated successfully!');
+    }
+
+    public function uploadApplicationDocument(Request $request, Application $application)
+    {
+        $request->validate([
+            'document_type' => 'required|string|max:100',
+            'document' => 'required|file|mimes:pdf,png,jpg,jpeg,webp|max:10240',
+            'verification_status' => 'nullable|in:pending,verified',
+        ]);
+
+        $file = $request->file('document');
+        $docType = $request->input('document_type');
+        $verificationStatus = $request->input('verification_status', 'verified');
+
+        $path = $file->store('documents/' . $application->application_number, 'public');
+
+        $document = ApplicationDocument::updateOrCreate(
+            [
+                'application_id' => $application->id,
+                'document_type' => $docType,
+            ],
+            [
+                'original_filename' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'file_size_bytes' => $file->getSize(),
+                'mime_type' => $file->getClientMimeType(),
+                'verification_status' => $verificationStatus,
+                'verified_by' => $verificationStatus === 'verified' ? Auth::id() : null,
+                'verified_at' => $verificationStatus === 'verified' ? now() : null,
+                'rejection_comment' => null,
+            ]
+        );
+
+        ApplicationActivity::create([
+            'application_id' => $application->id,
+            'action' => 'Certificate Uploaded by Admin',
+            'description' => "Administrator uploaded document: " . str_replace('_', ' ', $docType),
+        ]);
+
+        AuditLogService::log(
+            'document_uploaded_by_admin',
+            "Administrator uploaded document {$docType} for application {$application->application_number}"
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Certificate / Document uploaded successfully.',
+                'document' => $document,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Certificate uploaded successfully!');
+    }
+
+    public function replaceApplicationDocument(Request $request, ApplicationDocument $document)
+    {
+        $request->validate([
+            'document' => 'required|file|mimes:pdf,png,jpg,jpeg,webp|max:10240',
+            'verification_status' => 'nullable|in:pending,verified',
+        ]);
+
+        $file = $request->file('document');
+        $application = $document->application;
+        $verificationStatus = $request->input('verification_status', 'verified');
+
+        // Delete old file if exists
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+
+        $path = $file->store('documents/' . ($application ? $application->application_number : 'docs'), 'public');
+
+        $document->update([
+            'original_filename' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'file_size_bytes' => $file->getSize(),
+            'mime_type' => $file->getClientMimeType(),
+            'verification_status' => $verificationStatus,
+            'verified_by' => $verificationStatus === 'verified' ? Auth::id() : null,
+            'verified_at' => $verificationStatus === 'verified' ? now() : null,
+            'rejection_comment' => null,
+        ]);
+
+        if ($application) {
+            ApplicationActivity::create([
+                'application_id' => $application->id,
+                'action' => 'Certificate Replaced by Admin',
+                'description' => "Administrator replaced document: " . str_replace('_', ' ', $document->document_type),
+            ]);
+        }
+
+        AuditLogService::log(
+            'document_replaced_by_admin',
+            "Administrator replaced document ID {$document->id} ({$document->document_type})"
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Certificate / Document replaced successfully.',
+                'document' => $document,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Certificate replaced successfully!');
+    }
+
+    public function deleteApplicationDocument(ApplicationDocument $document)
+    {
+        $application = $document->application;
+        $docType = $document->document_type;
+
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        if ($application) {
+            ApplicationActivity::create([
+                'application_id' => $application->id,
+                'action' => 'Document Deleted by Admin',
+                'description' => "Administrator deleted document: " . str_replace('_', ' ', $docType),
+            ]);
+        }
+
+        AuditLogService::log(
+            'document_deleted_by_admin',
+            "Administrator deleted document {$docType} (ID: {$document->id})"
+        );
+
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Document deleted successfully.',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Document deleted successfully!');
     }
     
     public function storeApplication(Request $request)

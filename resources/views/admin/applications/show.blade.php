@@ -125,8 +125,12 @@
                 </div>
             </div>
 
-            <!-- Decision Action Buttons -->
+            <!-- Decision & Edit Action Buttons -->
             <div class="flex flex-wrap items-center gap-3 shrink-0">
+                <a href="{{ route('admin.applications.edit', $application->id) }}" class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-xl transition-all hover:scale-105 flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Edit Student Info
+                </a>
                 <button @click="decisionType = 'approve'; decisionModal = true" class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-xl transition-all hover:scale-105 flex items-center gap-1.5">
                     ✓ Approve & Issue Admission
                 </button>
@@ -346,6 +350,10 @@
                     </h3>
                     <p class="text-xs text-slate-500">Inspect original applicant file uploads, verify authenticity, and approve/reject individual documents.</p>
                 </div>
+                <a href="{{ route('admin.applications.edit', $application->id) }}" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs inline-flex items-center gap-2 shadow-sm transition-all">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Manage / Upload Certificates
+                </a>
             </div>
 
             @if($application->documents->count() > 0)

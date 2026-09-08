@@ -28,9 +28,15 @@ class AdminPermissionMiddleware
                 case 'applications':
                 case 'showApplication':
                 case 'storeApplication':
+                case 'editApplication':
+                case 'updateApplication':
+                case 'uploadApplicationDocument':
+                case 'replaceApplicationDocument':
+                case 'deleteApplicationDocument':
                     abort_unless($user->hasPermissionTo('manage_applications')
                         || $user->hasPermissionTo('verify_documents')
-                        || $user->hasPermissionTo('make_admission_decisions'), 403);
+                        || $user->hasPermissionTo('make_admission_decisions')
+                        || $user->hasPermissionTo('manage_settings'), 403);
                     break;
 
                 case 'payments':

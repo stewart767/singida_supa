@@ -269,9 +269,13 @@
                                 {{ $app->submitted_at ? $app->submitted_at->format('M d, Y') : 'Draft' }}
                             </td>
 
-                            <td class="py-4 px-4 text-right">
-                                <a href="{{ route('admin.applications.show', $app->id) }}" class="gradient-btn px-4 py-2 rounded-xl text-white font-extrabold text-[10px] shadow-sm inline-flex items-center gap-1 hover:scale-105 transition-transform">
-                                    360° Review & Uploads &rarr;
+                            <td class="py-4 px-4 text-right space-x-1.5 whitespace-nowrap">
+                                <a href="{{ route('admin.applications.edit', $app->id) }}" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[10px] shadow-sm inline-flex items-center gap-1 transition-all">
+                                    <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                    Edit
+                                </a>
+                                <a href="{{ route('admin.applications.show', $app->id) }}" class="gradient-btn px-3.5 py-2 rounded-xl text-white font-extrabold text-[10px] shadow-sm inline-flex items-center gap-1 hover:scale-105 transition-transform">
+                                    360° Review &rarr;
                                 </a>
                             </td>
                         </tr>
