@@ -42,7 +42,7 @@ class StoreAcademicProfileRequest extends FormRequest
             'acsee_grade2' => ['nullable', 'string', 'in:A,B,C,D,E,S,F,a,b,c,d,e,s,f'],
             'acsee_grade3' => ['nullable', 'string', 'in:A,B,C,D,E,S,F,a,b,c,d,e,s,f'],
             'acsee_gs_grade' => ['nullable', 'string', 'in:A,B,C,D,E,S,F,a,b,c,d,e,s,f'],
-            'acsee_points' => ['required_if:admission_type,Form Six', 'nullable', 'numeric', 'min:1', 'max:30'],
+            'acsee_points' => ['required_if:admission_type,Form Six', 'nullable', 'numeric', 'min:0', 'max:35'],
         ];
     }
 

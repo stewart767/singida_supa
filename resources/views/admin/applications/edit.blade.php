@@ -314,32 +314,32 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div class="space-y-1.5 md:col-span-2">
                             <label class="block font-extrabold text-slate-700 uppercase text-[10px]">College / Institution Name</label>
-                            <input type="text" name="college_name" value="{{ old('college_name', $academic->college_name ?? '') }}" placeholder="e.g. Singida Teachers Training College"
-                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="text" name="college_name" :disabled="admissionType !== 'Diploma'" value="{{ old('college_name', $academic->college_name ?? '') }}" placeholder="e.g. Singida Teachers Training College"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
                         </div>
 
                         <div class="space-y-1.5">
                             <label class="block font-extrabold text-slate-700 uppercase text-[10px]">Diploma GPA (Grade Point Average)</label>
-                            <input type="number" step="0.01" min="0" max="5" name="gpa" x-model.number="gpa" @input="recalc()" value="{{ old('gpa', $academic->gpa ?? '') }}" placeholder="e.g. 3.50"
-                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="number" step="0.01" min="0" max="5" name="gpa" :disabled="admissionType !== 'Diploma'" x-model="gpa" @input="recalc()" value="{{ old('gpa', $academic->gpa ?? '') }}" placeholder="e.g. 3.50"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
                         </div>
 
                         <div class="space-y-1.5">
                             <label class="block font-extrabold text-slate-700 uppercase text-[10px]">Diploma Programme Award Name</label>
-                            <input type="text" name="diploma_programme_name" value="{{ old('diploma_programme_name', $academic->diploma_programme_name ?? '') }}" placeholder="e.g. Diploma in Primary Education"
-                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="text" name="diploma_programme_name" :disabled="admissionType !== 'Diploma'" value="{{ old('diploma_programme_name', $academic->diploma_programme_name ?? '') }}" placeholder="e.g. Diploma in Primary Education"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
                         </div>
 
                         <div class="space-y-1.5">
                             <label class="block font-extrabold text-slate-700 uppercase text-[10px]">Registration / Award Number</label>
-                            <input type="text" name="diploma_registration_number" value="{{ old('diploma_registration_number', $academic->diploma_registration_number ?? '') }}" placeholder="e.g. REG/DPE/2024/001"
-                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="text" name="diploma_registration_number" :disabled="admissionType !== 'Diploma'" value="{{ old('diploma_registration_number', $academic->diploma_registration_number ?? '') }}" placeholder="e.g. REG/DPE/2024/001"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
                         </div>
 
                         <div class="space-y-1.5">
                             <label class="block font-extrabold text-slate-700 uppercase text-[10px]">Graduation Year</label>
-                            <input type="number" min="1990" max="{{ date('Y') }}" name="diploma_graduation_year" value="{{ old('diploma_graduation_year', $academic->diploma_graduation_year ?? '') }}" placeholder="e.g. {{ date('Y') - 1 }}"
-                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="number" min="1990" max="{{ date('Y') }}" name="diploma_graduation_year" :disabled="admissionType !== 'Diploma'" value="{{ old('diploma_graduation_year', $academic->diploma_graduation_year ?? '') }}" placeholder="e.g. {{ date('Y') - 1 }}"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-300 bg-slate-50 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
                         </div>
                     </div>
                 </div>
@@ -352,18 +352,18 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">CSEE Index Number</label>
-                                <input type="text" name="csee_number" value="{{ old('csee_number', $academic->csee_number ?? '') }}" placeholder="e.g. S0101/0001/2020"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 text-xs">
+                                <input type="text" name="csee_number" :disabled="admissionType !== 'Form Six'" value="{{ old('csee_number', $academic->csee_number ?? '') }}" placeholder="e.g. S0101/0001/2020"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">CSEE Completion Year</label>
-                                <input type="number" min="1990" max="{{ date('Y') }}" name="csee_year" value="{{ old('csee_year', $academic->csee_year ?? '') }}" placeholder="e.g. 2020"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 text-xs">
+                                <input type="number" min="1990" max="{{ date('Y') }}" name="csee_year" :disabled="admissionType !== 'Form Six'" value="{{ old('csee_year', $academic->csee_year ?? '') }}" placeholder="e.g. 2020"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">CSEE School Name</label>
-                                <input type="text" name="csee_school" value="{{ old('csee_school', $academic->csee_school ?? '') }}" placeholder="e.g. Singida Secondary School"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 text-xs">
+                                <input type="text" name="csee_school" :disabled="admissionType !== 'Form Six'" value="{{ old('csee_school', $academic->csee_school ?? '') }}" placeholder="e.g. Singida Secondary School"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                         </div>
                     </div>
@@ -378,23 +378,23 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">ACSEE Index Number</label>
-                                <input type="text" name="acsee_number" value="{{ old('acsee_number', $academic->acsee_number ?? '') }}" placeholder="e.g. S0101/0501/2022"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs">
+                                <input type="text" name="acsee_number" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_number', $academic->acsee_number ?? '') }}" placeholder="e.g. S0101/0501/2022"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">ACSEE Completion Year</label>
-                                <input type="number" min="1990" max="{{ date('Y') }}" name="acsee_year" value="{{ old('acsee_year', $academic->acsee_year ?? '') }}" placeholder="e.g. 2022"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs">
+                                <input type="number" min="1990" max="{{ date('Y') }}" name="acsee_year" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_year', $academic->acsee_year ?? '') }}" placeholder="e.g. 2022"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">ACSEE School Name</label>
-                                <input type="text" name="acsee_school" value="{{ old('acsee_school', $academic->acsee_school ?? '') }}" placeholder="e.g. Singida High School"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs">
+                                <input type="text" name="acsee_school" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_school', $academic->acsee_school ?? '') }}" placeholder="e.g. Singida High School"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">Combination</label>
-                                <input type="text" name="acsee_combination" value="{{ old('acsee_combination', $academic->acsee_combination ?? '') }}" placeholder="e.g. HGL, PCB, EGM"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs">
+                                <input type="text" name="acsee_combination" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_combination', $academic->acsee_combination ?? '') }}" placeholder="e.g. HGL, PCB, EGM"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                         </div>
 
@@ -403,10 +403,10 @@
                             <!-- Subject 1 -->
                             <div class="p-3 bg-white rounded-xl border border-purple-100 space-y-2">
                                 <label class="block font-black text-slate-700 uppercase text-[10px]">Principal Subject 1</label>
-                                <input type="text" name="acsee_subject1" value="{{ old('acsee_subject1', $academic->acsee_subject1 ?? '') }}" placeholder="Subject (e.g. History)"
-                                       class="w-full px-3 py-2 rounded-lg border border-slate-200 font-semibold text-xs">
+                                <input type="text" name="acsee_subject1" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_subject1', $academic->acsee_subject1 ?? '') }}" placeholder="Subject (e.g. History)"
+                                       class="w-full px-3 py-2 rounded-lg border border-slate-200 font-semibold text-xs disabled:opacity-50">
                                 <label class="block font-black text-slate-700 uppercase text-[10px]">Grade</label>
-                                <select name="acsee_grade1" x-model="g1" @change="recalc()" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-xs">
+                                <select name="acsee_grade1" :disabled="admissionType !== 'Form Six'" x-model="g1" @change="recalc()" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-xs disabled:opacity-50">
                                     <option value="">-- Select Grade --</option>
                                     @foreach(['A', 'B', 'C', 'D', 'E', 'S', 'F'] as $g)
                                         <option value="{{ $g }}" {{ old('acsee_grade1', $academic->acsee_grade1 ?? '') === $g ? 'selected' : '' }}>Grade {{ $g }} ({{ $g === 'A' ? '5 pts' : ($g === 'B' ? '4 pts' : ($g === 'C' ? '3 pts' : ($g === 'D' ? '2 pts' : ($g === 'E' ? '1 pt' : ($g === 'S' ? '0.5 pt' : '0 pts'))))) }})</option>
@@ -417,10 +417,10 @@
                             <!-- Subject 2 -->
                             <div class="p-3 bg-white rounded-xl border border-purple-100 space-y-2">
                                 <label class="block font-black text-slate-700 uppercase text-[10px]">Principal Subject 2</label>
-                                <input type="text" name="acsee_subject2" value="{{ old('acsee_subject2', $academic->acsee_subject2 ?? '') }}" placeholder="Subject (e.g. Geography)"
-                                       class="w-full px-3 py-2 rounded-lg border border-slate-200 font-semibold text-xs">
+                                <input type="text" name="acsee_subject2" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_subject2', $academic->acsee_subject2 ?? '') }}" placeholder="Subject (e.g. Geography)"
+                                       class="w-full px-3 py-2 rounded-lg border border-slate-200 font-semibold text-xs disabled:opacity-50">
                                 <label class="block font-black text-slate-700 uppercase text-[10px]">Grade</label>
-                                <select name="acsee_grade2" x-model="g2" @change="recalc()" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-xs">
+                                <select name="acsee_grade2" :disabled="admissionType !== 'Form Six'" x-model="g2" @change="recalc()" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-xs disabled:opacity-50">
                                     <option value="">-- Select Grade --</option>
                                     @foreach(['A', 'B', 'C', 'D', 'E', 'S', 'F'] as $g)
                                         <option value="{{ $g }}" {{ old('acsee_grade2', $academic->acsee_grade2 ?? '') === $g ? 'selected' : '' }}>Grade {{ $g }} ({{ $g === 'A' ? '5 pts' : ($g === 'B' ? '4 pts' : ($g === 'C' ? '3 pts' : ($g === 'D' ? '2 pts' : ($g === 'E' ? '1 pt' : ($g === 'S' ? '0.5 pt' : '0 pts'))))) }})</option>
@@ -431,10 +431,10 @@
                             <!-- Subject 3 -->
                             <div class="p-3 bg-white rounded-xl border border-purple-100 space-y-2">
                                 <label class="block font-black text-slate-700 uppercase text-[10px]">Principal Subject 3</label>
-                                <input type="text" name="acsee_subject3" value="{{ old('acsee_subject3', $academic->acsee_subject3 ?? '') }}" placeholder="Subject (e.g. Language)"
-                                       class="w-full px-3 py-2 rounded-lg border border-slate-200 font-semibold text-xs">
+                                <input type="text" name="acsee_subject3" :disabled="admissionType !== 'Form Six'" value="{{ old('acsee_subject3', $academic->acsee_subject3 ?? '') }}" placeholder="Subject (e.g. Language)"
+                                       class="w-full px-3 py-2 rounded-lg border border-slate-200 font-semibold text-xs disabled:opacity-50">
                                 <label class="block font-black text-slate-700 uppercase text-[10px]">Grade</label>
-                                <select name="acsee_grade3" x-model="g3" @change="recalc()" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-xs">
+                                <select name="acsee_grade3" :disabled="admissionType !== 'Form Six'" x-model="g3" @change="recalc()" class="w-full px-3 py-2 rounded-lg border border-slate-200 font-bold text-xs disabled:opacity-50">
                                     <option value="">-- Select Grade --</option>
                                     @foreach(['A', 'B', 'C', 'D', 'E', 'S', 'F'] as $g)
                                         <option value="{{ $g }}" {{ old('acsee_grade3', $academic->acsee_grade3 ?? '') === $g ? 'selected' : '' }}>Grade {{ $g }} ({{ $g === 'A' ? '5 pts' : ($g === 'B' ? '4 pts' : ($g === 'C' ? '3 pts' : ($g === 'D' ? '2 pts' : ($g === 'E' ? '1 pt' : ($g === 'S' ? '0.5 pt' : '0 pts'))))) }})</option>
@@ -447,7 +447,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">General Studies (GS) Grade</label>
-                                <select name="acsee_gs_grade" class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs">
+                                <select name="acsee_gs_grade" :disabled="admissionType !== 'Form Six'" class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                                     <option value="">-- Select GS Grade --</option>
                                     @foreach(['A', 'B', 'C', 'D', 'E', 'S', 'F'] as $g)
                                         <option value="{{ $g }}" {{ old('acsee_gs_grade', $academic->acsee_gs_grade ?? '') === $g ? 'selected' : '' }}>Grade {{ $g }}</option>
@@ -457,8 +457,8 @@
 
                             <div class="space-y-1.5">
                                 <label class="block font-extrabold text-slate-700 uppercase text-[10px]">Total Points (Auto-computed / Editable)</label>
-                                <input type="number" step="0.5" min="0" max="35" name="acsee_points" x-model.number="points" @input="recalc()" value="{{ old('acsee_points', $academic->acsee_points ?? '') }}"
-                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs">
+                                <input type="number" step="0.5" min="0" max="35" name="acsee_points" :disabled="admissionType !== 'Form Six'" x-model="points" @input="recalc()" value="{{ old('acsee_points', $academic->acsee_points ?? '') }}"
+                                       class="w-full px-4 py-2.5 rounded-xl border border-purple-200 bg-white font-bold text-slate-900 text-xs disabled:opacity-50">
                             </div>
                         </div>
                     </div>
@@ -681,14 +681,14 @@
         function editStudentData() {
             return {
                 admissionType: '{{ old('admission_type', $application->admission_type ?? 'Form Six') }}',
-                gpa: {{ old('gpa', $academic->gpa ?? 0) }},
-                points: {{ old('acsee_points', $academic->acsee_points ?? 0) }},
+                gpa: '{{ old('gpa', $academic->gpa ?? '') }}',
+                points: '{{ old('acsee_points', $academic->acsee_points ?? '') }}',
                 g1: '{{ old('acsee_grade1', $academic->acsee_grade1 ?? '') }}',
                 g2: '{{ old('acsee_grade2', $academic->acsee_grade2 ?? '') }}',
                 g3: '{{ old('acsee_grade3', $academic->acsee_grade3 ?? '') }}',
 
                 computedCategory: '{{ $application->admission_category ?? 'Direct Entry' }}',
-                computedPoints: {{ old('acsee_points', $academic->acsee_points ?? 0) }},
+                computedPoints: '{{ old('acsee_points', $academic->acsee_points ?? '') }}',
 
                 showUploadModal: false,
                 showReplaceModal: false,
