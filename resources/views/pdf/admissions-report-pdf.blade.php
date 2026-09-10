@@ -323,15 +323,19 @@
         <!-- APPLICATIONS SECTION -->
         <div class="section-title">Applications</div>
         <ul class="kpi-list">
-            <li>Previous Total: <strong>{{ number_format($kpis['previous_total']) }}</strong></li>
-            <li>New (Custom Period): <strong>{{ number_format($kpis['new_total']) }}</strong></li>
-            <li>Total Applications: <strong>{{ number_format($kpis['total_applications']) }}</strong></li>
+            @if(isset($kpis['previous_total']) && $reportPeriodText !== 'All-Time')
+                <li>Previous Total: <strong>{{ number_format($kpis['previous_total']) }}</strong></li>
+                <li>New (Custom Period): <strong>{{ number_format($kpis['new_total']) }}</strong></li>
+                <li>Total Applications: <strong>{{ number_format($kpis['total_applications']) }}</strong></li>
+            @else
+                <li>Total Applications: <strong>{{ number_format($kpis['total_applications']) }}</strong></li>
+            @endif
         </ul>
 
         <!-- PENDING SECTION -->
-        <div class="section-title">Pending (Custom Period)</div>
+        <div class="section-title">Pending Applications</div>
         <ul class="kpi-list">
-            <li>Pending (Custom Period): <strong>{{ number_format($kpis['pending_total']) }}</strong></li>
+            <li>Pending: <strong>{{ number_format($kpis['pending_total']) }}</strong></li>
         </ul>
 
         <!-- TOP ENROLLED PROGRAMS SECTION -->
@@ -392,7 +396,7 @@
                 @if(count($regionalPerformance) > 0)
                     <tr class="total-row">
                         <td colspan="2">TOTAL</td>
-                        <td style="text-align: right;">{{ number_format($kpis['new_total']) }}</td>
+                        <td style="text-align: right;">{{ number_format(collect($regionalPerformance)->sum('count')) }}</td>
                         <td style="text-align: right;">100%</td>
                     </tr>
                 @endif
@@ -421,6 +425,12 @@
                         <td colspan="3" style="text-align: center; color: #64748b;">No data found for this period.</td>
                     </tr>
                 @endforelse
+                @if(count($districtsPerformance) > 0)
+                    <tr class="total-row">
+                        <td colspan="2">TOTAL DISTRICTS</td>
+                        <td style="text-align: right;">{{ number_format(collect($districtsPerformance)->sum('count')) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 
@@ -446,6 +456,12 @@
                         <td colspan="3" style="text-align: center; color: #64748b;">No data found for this period.</td>
                     </tr>
                 @endforelse
+                @if(count($wardsPerformance) > 0)
+                    <tr class="total-row">
+                        <td colspan="2">TOTAL WARDS</td>
+                        <td style="text-align: right;">{{ number_format(collect($wardsPerformance)->sum('count')) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 

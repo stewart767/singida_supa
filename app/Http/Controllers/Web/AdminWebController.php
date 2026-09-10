@@ -1730,7 +1730,11 @@ class AdminWebController extends Controller
         }
 
         $type = $request->get('type', 'applications');
-        $filters = $request->only(['year', 'month', 'start_date', 'end_date', 'status']);
+        $filters = $request->only([
+            'year', 'month', 'start_date', 'end_date', 'status',
+            'search', 'programme_id', 'admission_category', 'admission_type',
+            'gender', 'region', 'academic_year_id', 'intake_id', 'sort_by', 'sort_order'
+        ]);
         $generatedAt = now()->format('d M Y, h:i A');
         $refNumber = 'SUPA/REP/' . date('Ymd') . '/' . strtoupper(substr(md5(microtime()), 0, 5));
 
@@ -1777,29 +1781,26 @@ class AdminWebController extends Controller
             $startDate = null;
             $endDate = null;
             $reportPeriodText = 'All-Time';
+            $hasDateFilter = false;
 
             if ($request->filled('start_date') && $request->filled('end_date')) {
                 $startDate = \Illuminate\Support\Carbon::parse($request->get('start_date'))->startOfDay();
                 $endDate = \Illuminate\Support\Carbon::parse($request->get('end_date'))->endOfDay();
                 $reportPeriodText = 'Custom (' . $startDate->format('Y-m-d') . ' to ' . $endDate->format('Y-m-d') . ')';
+                $hasDateFilter = true;
             } elseif ($request->filled('year') && $request->filled('month')) {
                 $year = $request->get('year');
                 $month = $request->get('month');
                 $startDate = \Illuminate\Support\Carbon::create($year, $month, 1)->startOfDay();
                 $endDate = \Illuminate\Support\Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
                 $reportPeriodText = 'Custom (' . $startDate->format('Y-m-d') . ' to ' . $endDate->format('Y-m-d') . ')';
+                $hasDateFilter = true;
             } elseif ($request->filled('year')) {
                 $year = $request->get('year');
                 $startDate = \Illuminate\Support\Carbon::create($year, 1, 1)->startOfDay();
                 $endDate = \Illuminate\Support\Carbon::create($year, 12, 31)->endOfDay();
                 $reportPeriodText = 'Academic Year ' . $year;
-            }
-
-            // If no range is specified, default to today
-            if (!$startDate || !$endDate) {
-                $startDate = \Illuminate\Support\Carbon::today()->startOfDay();
-                $endDate = \Illuminate\Support\Carbon::today()->endOfDay();
-                $reportPeriodText = 'Custom (' . $startDate->format('Y-m-d') . ' to ' . $endDate->format('Y-m-d') . ')';
+                $hasDateFilter = true;
             }
 
             // Date metadata
@@ -1810,13 +1811,27 @@ class AdminWebController extends Controller
             $generationTime = $now->format('h:i A'); // e.g. 11:12 AM
 
             // Calculate KPIs
-            $previousTotal = Application::where('created_at', '<', $startDate)->count();
-            $newTotal = Application::whereBetween('created_at', [$startDate, $endDate])->count();
-            $totalApplications = $previousTotal + $newTotal;
+            if ($hasDateFilter) {
+                $previousTotal = Application::where('created_at', '<', $startDate)->count();
+                $newTotal = Application::whereBetween('created_at', [$startDate, $endDate])->count();
+                $totalApplications = $previousTotal + $newTotal;
 
-            $pendingTotal = Application::whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist'])
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->count();
+                $pendingTotal = Application::whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist'])
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->count();
+
+                $appDateConstraint = fn($q) => $q->whereBetween('created_at', [$startDate, $endDate]);
+                $appJoinDateConstraint = fn($q) => $q->whereBetween('applications.created_at', [$startDate, $endDate]);
+            } else {
+                $previousTotal = 0;
+                $newTotal = Application::count();
+                $totalApplications = $newTotal;
+
+                $pendingTotal = Application::whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist'])->count();
+
+                $appDateConstraint = fn($q) => $q;
+                $appJoinDateConstraint = fn($q) => $q;
+            }
 
             $kpis = [
                 'previous_total' => $previousTotal,
@@ -1826,7 +1841,9 @@ class AdminWebController extends Controller
             ];
 
             // 1. Top Enrolled Programs
-            $topProgramsRaw = Application::whereBetween('created_at', [$startDate, $endDate])
+            $topProgramsQuery = Application::query();
+            $appDateConstraint($topProgramsQuery);
+            $topProgramsRaw = $topProgramsQuery
                 ->select('programme_id', \Illuminate\Support\Facades\DB::raw('count(id) as enrolled_count'))
                 ->groupBy('programme_id')
                 ->orderBy('enrolled_count', 'desc')
@@ -1845,7 +1862,9 @@ class AdminWebController extends Controller
             }
 
             // 2. Regional Performance
-            $regionalRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+            $regionalQuery = Application::query();
+            $appJoinDateConstraint($regionalQuery);
+            $regionalRaw = $regionalQuery
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
                 ->whereNotNull('applicants.region')
                 ->where('applicants.region', '!=', '')
@@ -1855,9 +1874,10 @@ class AdminWebController extends Controller
                 ->get();
 
             $regionalPerformance = [];
+            $regionalTotalSum = $regionalRaw->sum('count');
             foreach ($regionalRaw as $item) {
                 $regionName = trim($item->region);
-                $percentage = $newTotal > 0 ? round(($item->count / $newTotal) * 100, 1) : 0;
+                $percentage = $regionalTotalSum > 0 ? round(($item->count / $regionalTotalSum) * 100, 1) : 0;
                 $regionalPerformance[] = [
                     'name' => $regionName,
                     'count' => $item->count,
@@ -1866,7 +1886,9 @@ class AdminWebController extends Controller
             }
 
             // 3. All Districts
-            $districtsRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+            $districtsQuery = Application::query();
+            $appJoinDateConstraint($districtsQuery);
+            $districtsRaw = $districtsQuery
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
                 ->whereNotNull('applicants.district')
                 ->where('applicants.district', '!=', '')
@@ -1885,7 +1907,9 @@ class AdminWebController extends Controller
             }
 
             // 4. Wards with Admissions
-            $wardsRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+            $wardsQuery = Application::query();
+            $appJoinDateConstraint($wardsQuery);
+            $wardsRaw = $wardsQuery
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
                 ->whereNotNull('applicants.ward')
                 ->where('applicants.ward', '!=', '')
@@ -1903,16 +1927,18 @@ class AdminWebController extends Controller
                 ];
             }
 
-            // 5. Top 20 Fee Payment Rates
-            $ratesRaw = Application::whereBetween('applications.created_at', [$startDate, $endDate])
+            // 5. Top 20 Fee Payment Rates (Using distinct to prevent leftJoin duplicates)
+            $ratesQuery = Application::query();
+            $appJoinDateConstraint($ratesQuery);
+            $ratesRaw = $ratesQuery
                 ->join('applicants', 'applications.applicant_id', '=', 'applicants.id')
                 ->leftJoin('payments', 'applications.id', '=', 'payments.application_id')
                 ->whereNotNull('applicants.region')
                 ->where('applicants.region', '!=', '')
                 ->select(
                     'applicants.region',
-                    \Illuminate\Support\Facades\DB::raw('count(applications.id) as enrolled'),
-                    \Illuminate\Support\Facades\DB::raw("sum(case when payments.payment_status = 'paid' then 1 else 0 end) as paid")
+                    \Illuminate\Support\Facades\DB::raw('count(DISTINCT applications.id) as enrolled'),
+                    \Illuminate\Support\Facades\DB::raw("count(DISTINCT case when payments.payment_status = 'paid' then applications.id else null end) as paid")
                 )
                 ->groupBy('applicants.region')
                 ->get();
@@ -1931,7 +1957,6 @@ class AdminWebController extends Controller
                     'percentage' => $percentage,
                 ];
             }
-
 
             // Sort payment rates by percentage desc, then enrolled desc, and take top 20
             usort($paymentRates, function ($a, $b) {

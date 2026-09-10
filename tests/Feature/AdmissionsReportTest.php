@@ -160,5 +160,79 @@ class AdmissionsReportTest extends TestCase
         $response->assertDontSee('UNKNOWN DISTRICT');
         $response->assertDontSee('UNKNOWN WARD');
     }
+
+    public function test_applications_pdf_report_respects_search_and_filters()
+    {
+        $adminUser = User::where('email', 'admin@supa.ac.tz')->first();
+        $this->actingAs($adminUser);
+
+        $programme1 = Programme::first();
+        $programme2 = Programme::skip(1)->first() ?? Programme::create(['code' => 'TEST02', 'name' => 'Secondary Education', 'department' => 'Education', 'duration_years' => 3, 'tuition_fee' => 1000000]);
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+        $applicant = Applicant::first();
+
+        // Create 2 distinct applications for different programmes
+        Application::create([
+            'application_number' => 'APP-SPECIFIC-MATCH',
+            'applicant_id' => $applicant->id,
+            'programme_id' => $programme1->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'status' => 'Under Review',
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+        ]);
+
+        Application::create([
+            'application_number' => 'APP-OTHER-FILTERED-OUT',
+            'applicant_id' => $applicant->id,
+            'programme_id' => $programme2->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'status' => 'Under Review',
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+        ]);
+
+        // Filter by specific search term
+        $response = $this->get('/admin/reports/pdf?type=applications&search=APP-SPECIFIC-MATCH');
+        $response->assertStatus(200);
+        $response->assertSee('APP-SPECIFIC-MATCH');
+        $response->assertDontSee('APP-OTHER-FILTERED-OUT');
+
+        // Filter by programme_id
+        $response2 = $this->get('/admin/reports/pdf?type=applications&programme_id=' . $programme1->id);
+        $response2->assertStatus(200);
+        $response2->assertSee('APP-SPECIFIC-MATCH');
+        $response2->assertDontSee('APP-OTHER-FILTERED-OUT');
+    }
+
+    public function test_applications_csv_export_respects_filters()
+    {
+        $adminUser = User::where('email', 'admin@supa.ac.tz')->first();
+        $this->actingAs($adminUser);
+
+        $programme = Programme::first();
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+        $applicant = Applicant::first();
+
+        Application::create([
+            'application_number' => 'APP-CSV-TARGET',
+            'applicant_id' => $applicant->id,
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'status' => 'Approved',
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+        ]);
+
+        $response = $this->get('/api/v1/admin/export-report?type=applications&search=APP-CSV-TARGET');
+        $response->assertStatus(200);
+        $this->assertStringContainsString('APP-CSV-TARGET', $response->getContent());
+    }
 }
+
 

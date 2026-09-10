@@ -40,6 +40,58 @@ class ReportExporterService
                 $query->where('status', 'Approved');
             }
 
+            // Apply Search Filter
+            if (!empty($filters['search'])) {
+                $search = $filters['search'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('application_number', 'like', "%{$search}%")
+                      ->orWhereHas('applicant.user', function ($uq) use ($search) {
+                          $uq->where('name', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%")
+                             ->orWhere('phone', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            // Apply Programme Filter
+            if (!empty($filters['programme_id'])) {
+                $query->where('programme_id', $filters['programme_id']);
+            }
+
+            // Apply Admission Category Filter
+            if (!empty($filters['admission_category'])) {
+                $query->where('admission_category', $filters['admission_category']);
+            }
+
+            // Apply Admission Type Filter
+            if (!empty($filters['admission_type'])) {
+                $query->where('admission_type', $filters['admission_type']);
+            }
+
+            // Apply Academic Year Filter
+            if (!empty($filters['academic_year_id'])) {
+                $query->where('academic_year_id', $filters['academic_year_id']);
+            }
+
+            // Apply Intake Filter
+            if (!empty($filters['intake_id'])) {
+                $query->where('intake_id', $filters['intake_id']);
+            }
+
+            // Apply Gender Filter
+            if (!empty($filters['gender'])) {
+                $query->whereHas('applicant', function ($q) use ($filters) {
+                    $q->where('gender', $filters['gender']);
+                });
+            }
+
+            // Apply Region Filter
+            if (!empty($filters['region'])) {
+                $query->whereHas('applicant', function ($q) use ($filters) {
+                    $q->where('region', $filters['region']);
+                });
+            }
+
             // Apply Date Filters (Year, Month, Start Date, End Date)
             if (!empty($filters['year'])) {
                 $query->whereYear('created_at', $filters['year']);
@@ -57,9 +109,9 @@ class ReportExporterService
             // Apply Status Filter
             if (!empty($filters['status'])) {
                 $status = $filters['status'];
-                if ($status === 'pending') {
+                if ($status === 'pending' || $status === 'Pending') {
                     $query->whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist']);
-                } elseif ($status === 'active' || $status === 'approved') {
+                } elseif ($status === 'active' || $status === 'approved' || $status === 'Approved') {
                     $query->where('status', 'Approved');
                 } else {
                     $query->where('status', $status);
@@ -69,6 +121,27 @@ class ReportExporterService
             return $query;
         } elseif ($type === 'payments') {
             $query = Payment::with(['application.applicant.user', 'application.programme']);
+
+            // Apply Search Filter
+            if (!empty($filters['search'])) {
+                $search = $filters['search'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('control_number', 'like', "%{$search}%")
+                      ->orWhere('transaction_reference', 'like', "%{$search}%")
+                      ->orWhereHas('application.applicant.user', function ($uq) use ($search) {
+                          $uq->where('name', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%")
+                             ->orWhere('phone', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            // Apply Programme Filter
+            if (!empty($filters['programme_id'])) {
+                $query->whereHas('application', function ($q) use ($filters) {
+                    $q->where('programme_id', $filters['programme_id']);
+                });
+            }
 
             // Apply Date Filters (Year, Month, Start Date, End Date)
             if (!empty($filters['year'])) {

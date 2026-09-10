@@ -30,7 +30,11 @@ class ReportController extends Controller
         }
 
         $type = $request->get('type', 'applications');
-        $filters = $request->only(['year', 'month', 'start_date', 'end_date', 'status']);
+        $filters = $request->only([
+            'year', 'month', 'start_date', 'end_date', 'status',
+            'search', 'programme_id', 'admission_category', 'admission_type',
+            'gender', 'region', 'academic_year_id', 'intake_id', 'sort_by', 'sort_order'
+        ]);
         $csvContent = $this->reportExporter->generateCsvReport($type, $filters);
 
         return response($csvContent, 200, [
