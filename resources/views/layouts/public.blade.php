@@ -977,13 +977,40 @@
                         </div>
 
                         <!-- Progress Bar -->
+                        <!-- Progress Bar -->
                         <div class="w-full bg-slate-200 rounded-full h-2">
                             <div class="bg-gradient-to-r from-amber-500 to-emerald-500 h-full rounded-full transition-all duration-300"
                                  :style="'width: ' + (trackResult?.completion_percentage || 0) + '%'"></div>
                         </div>
 
-                        <!-- Incomplete Action Flow inside modal -->
-                        <template x-if="trackResult?.status === 'Draft' || trackResult?.status === 'IN_PROGRESS' || trackResult?.status === 'Pending Payment' || trackResult?.status === 'PAYMENT_PENDING'">
+                        <!-- Missing Documents Warning inside modal -->
+                        <template x-if="trackResult?.has_missing_documents">
+                            <div class="border-t border-slate-200 pt-3 space-y-3">
+                                <div class="p-3 bg-amber-50 rounded-xl border border-amber-300 text-[11px] text-amber-900 leading-normal font-semibold">
+                                    ⚠️ <strong>Vyeti vya lazima havijapakiwa:</strong> <span x-text="(trackResult?.missing_documents_labels || []).join(', ')"></span>.
+                                </div>
+                                <button @click="
+                                    trackOtpLoading = true; trackOtpError = null;
+                                    axios.post('{{ url('/api/v1/public/resume-direct') }}', { application_id: trackResult.application_id, user_id: trackResult.user_id })
+                                        .then(res => { window.location.href = res.data.redirect_url; })
+                                        .catch(err => { trackOtpError = err.response?.data?.message || 'Imeshindikana kuendelea na usajili. Jaribu tena baadae.'; trackOtpLoading = false; })
+                                " :disabled="trackOtpLoading" 
+                                        class="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-black py-3.5 rounded-2xl text-xs sm:text-sm shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <span x-show="!trackOtpLoading" class="flex items-center gap-1.5">🚀 Pakia Vyeti Vilivyobaki (Upload Missing Documents)</span>
+                                    <span x-show="trackOtpLoading" x-cloak class="flex items-center gap-2">
+                                        <svg class="animate-spin h-4 w-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Inafungua...
+                                    </span>
+                                </button>
+                                <div x-show="trackOtpError" x-cloak class="p-2 bg-red-100 border border-red-200 text-red-800 rounded-xl text-[10px] font-bold" x-text="trackOtpError"></div>
+                            </div>
+                        </template>
+
+                        <!-- Incomplete Action Flow inside modal (when no missing doc alert) -->
+                        <template x-if="!trackResult?.has_missing_documents && (trackResult?.status === 'Draft' || trackResult?.status === 'IN_PROGRESS' || trackResult?.status === 'Pending Payment' || trackResult?.status === 'PAYMENT_PENDING')">
                             <div class="border-t border-slate-200 pt-3 space-y-3">
                                 <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-normal font-semibold">
                                     ⚠️ <strong>Ombi halijakamilika (Application Incomplete).</strong> Bofya kitufe kilicho chini ili kuendelea na usajili mara moja.
@@ -1009,7 +1036,7 @@
                         </template>
 
                         <!-- Completed Application Message -->
-                        <template x-if="trackResult?.status === 'Approved' || trackResult?.status === 'SUBMITTED' || trackResult?.status === 'Under Review'">
+                        <template x-if="!trackResult?.has_missing_documents && (trackResult?.status === 'Approved' || trackResult?.status === 'SUBMITTED' || trackResult?.status === 'Under Review')">
                             <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-[11px] text-emerald-900 leading-normal font-semibold">
                                 🎉 <strong>Ombi lako limepokelewa kikamilifu (Submitted).</strong> Hakuna hatua za ziada. Tafadhali subiri mrejesho wa udahili.
                             </div>

@@ -153,8 +153,82 @@
                             </div>
                         </div>
 
-                        <!-- Incomplete / Resume Flow -->
-                        <template x-if="result?.status === 'Draft' || result?.status === 'IN_PROGRESS' || result?.status === 'Pending Payment' || result?.status === 'PAYMENT_PENDING'">
+                        <!-- Document & Certificate Breakdown Section -->
+                        <template x-if="result?.documents_status && result?.documents_status.length > 0">
+                            <div class="space-y-3 pt-2 border-t border-slate-100">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span>📁</span>
+                                        <span>Vyeti na Nyaraka (Certificates Checklist)</span>
+                                    </span>
+                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full"
+                                          :class="result?.has_missing_documents ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'"
+                                          x-text="result?.has_missing_documents ? result?.missing_documents_count + ' Havijapakiwa (Missing)' : '✓ Vyeti Vyote Vimekamilika'">
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-2.5">
+                                    <template x-for="(doc, idx) in result.documents_status" :key="idx">
+                                        <div class="flex items-center justify-between p-3.5 rounded-2xl border text-xs font-semibold transition-all"
+                                             :class="doc.uploaded ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-amber-50/70 border-amber-300 text-amber-950'">
+                                            <div class="flex items-center gap-3 truncate">
+                                                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 font-bold"
+                                                      :class="doc.uploaded ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950'"
+                                                      x-text="doc.uploaded ? '✓' : '!'"></span>
+                                                <div class="truncate">
+                                                    <span class="font-extrabold text-slate-900 block truncate" x-text="doc.label"></span>
+                                                    <span class="text-[10px] text-slate-400 block truncate" x-text="doc.original_filename || 'Bado hakijapakiwa kwenye mfumo'"></span>
+                                                </div>
+                                            </div>
+                                            <div class="shrink-0 pl-2">
+                                                <template x-if="doc.uploaded">
+                                                    <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase shadow-sm"
+                                                          :class="doc.verification_status === 'verified' ? 'bg-emerald-100 text-emerald-800' : (doc.verification_status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200')"
+                                                          x-text="doc.verification_status === 'verified' ? '✓ Verified' : (doc.verification_status === 'rejected' ? '⚠️ Rejected' : '✓ Imepakiwa')"></span>
+                                                </template>
+                                                <template x-if="!doc.uploaded">
+                                                    <span class="px-3 py-1 rounded-full bg-amber-200 text-amber-950 text-[10px] font-black uppercase shadow-sm">
+                                                        ⚠️ Inahitajika
+                                                    </span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Missing Documents Alert (if any certificates are missing regardless of status) -->
+                        <template x-if="result?.has_missing_documents">
+                            <div class="p-4 bg-amber-50 rounded-2xl border border-amber-300 text-xs sm:text-sm text-amber-900 leading-relaxed font-semibold space-y-3">
+                                <div>
+                                    <span class="block text-amber-950 font-bold mb-1">⚠️ Vyeti vya Lazima Havijakamilika (Certificates Incomplete)</span>
+                                    Kuna vyeti vinavyohitajika ambavyo havijapakiwa kwenye ombi hili. Bofya kitufe hapa chini ili kuingia kwenye fomu na kupakia vyeti vilivyobaki.
+                                </div>
+                                <button @click="
+                                    otpLoading = true; otpError = null;
+                                    axios.post('{{ url('/api/v1/public/resume-direct') }}', { application_id: result.application_id, user_id: result.user_id })
+                                        .then(res => { window.location.href = res.data.redirect_url; })
+                                        .catch(err => { otpError = err.response?.data?.message || 'Imeshindikana kuendelea na usajili. Jaribu tena baadae.'; otpLoading = false; })
+                                " :disabled="otpLoading"
+                                        class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3.5 rounded-2xl text-xs sm:text-sm shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
+                                    <span x-show="!otpLoading" class="flex items-center gap-2">
+                                        🚀 Pakia Vyeti Vilivyobaki (Resume & Upload Certificates)
+                                    </span>
+                                    <span x-show="otpLoading" x-cloak class="flex items-center gap-2">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Inafungua ukurasa wa vyeti...
+                                    </span>
+                                </button>
+                                <div x-show="otpError" x-cloak class="p-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-xs font-bold flex gap-2 items-center" x-text="otpError"></div>
+                            </div>
+                        </template>
+
+                        <!-- Incomplete Draft / Payment Pending (when not yet submitted and no document alert) -->
+                        <template x-if="!result?.has_missing_documents && (result?.status === 'Draft' || result?.status === 'IN_PROGRESS' || result?.status === 'Pending Payment' || result?.status === 'PAYMENT_PENDING')">
                             <div class="border-t border-slate-100 pt-6 space-y-4">
                                 <div class="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs sm:text-sm text-amber-900 leading-relaxed font-semibold">
                                     <span class="block text-amber-950 font-bold mb-1">⚠️ Ombi Lako Halijakamilika (Application Incomplete)</span>
@@ -195,14 +269,14 @@
                             </div>
                         </template>
                         
-                        <!-- Completed Application Message -->
-                        <template x-if="result?.status === 'Approved' || result?.status === 'SUBMITTED' || result?.status === 'Under Review'">
-                            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-150 text-xs sm:text-sm text-emerald-900 leading-relaxed font-semibold">
+                        <!-- Fully Completed Application Message -->
+                        <template x-if="!result?.has_missing_documents && (result?.status === 'Approved' || result?.status === 'SUBMITTED' || result?.status === 'Under Review')">
+                            <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs sm:text-sm text-emerald-900 leading-relaxed font-semibold">
                                 <span class="block text-emerald-950 font-bold mb-1">🎉 Hongera! Ombi lako limepokelewa kikamilifu.</span>
-                                Maombi yako yamewasilishwa vizuri kwenye mfumo wetu. Hakuna hatua za ziada za kujaza kwa sasa. Tafadhali subiri mrejesho wa udahili.
+                                Maombi yako yamewasilishwa vizuri kwenye mfumo wetu pamoja na vyeti vyote vinavyohitajika. Hakuna hatua za ziada za kujaza kwa sasa. Tafadhali subiri mrejesho wa udahili.
                                 <br>
                                 <span class="text-slate-500 font-medium italic text-[11px] block mt-1.5">
-                                    (Congratulations! Your application has been successfully submitted. No further action is required at this moment. Kindly await admission results.)
+                                    (Congratulations! Your application has been successfully submitted with all required certificates. Kindly await admission results.)
                                 </span>
                             </div>
                         </template>

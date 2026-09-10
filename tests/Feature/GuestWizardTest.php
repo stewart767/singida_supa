@@ -116,7 +116,39 @@ class GuestWizardTest extends TestCase
         $this->assertNotNull($application);
         $this->assertTrue((bool)$application->is_public_submission);
 
-        // 7. Complete final submission
+        // Mark payment as paid to allow certificate upload
+        $application->payment()->update(['payment_status' => 'paid']);
+
+        // 7a. Attempt submission without required certificates -> must fail 422
+        $blockedRes = $this->postJson('/api/v1/applicant/submit-final', [
+            'digital_signature' => 'Jane Doe Guest',
+            'confirm_accurate' => true,
+            'read_privacy' => true,
+            'read_terms' => true,
+            'consent_given' => true,
+            'understand_penalty' => true,
+        ]);
+        $blockedRes->assertStatus(422)
+                   ->assertJsonStructure(['message', 'missing_documents']);
+
+        // 7b. Attach required documents for Diploma applicant (csee_certificate, diploma_certificate, transcript)
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->postJson('/applicant/upload-document', [
+            'document_type' => 'csee_certificate',
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('csee.pdf', 100, 'application/pdf'),
+        ])->assertStatus(200);
+
+        $this->postJson('/applicant/upload-document', [
+            'document_type' => 'diploma_certificate',
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('diploma.pdf', 100, 'application/pdf'),
+        ])->assertStatus(200);
+
+        $this->postJson('/applicant/upload-document', [
+            'document_type' => 'transcript',
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('transcript.pdf', 100, 'application/pdf'),
+        ])->assertStatus(200);
+
+        // 7c. Complete final submission with documents attached -> succeeds 200
         $this->postJson('/api/v1/applicant/submit-final', [
             'digital_signature' => 'Jane Doe Guest',
             'confirm_accurate' => true,

@@ -54,11 +54,18 @@ class PublicPortalController extends Controller
         $phone = $user->phone;
         $maskedPhone = substr($phone, 0, 4) . '***' . substr($phone, -4);
 
+        $app->loadMissing(['programme', 'payment', 'admissionLetter', 'documents']);
+
+        $documentsBreakdown = $app->getDocumentStatusBreakdown();
+        $missingDocs = $app->getMissingDocumentTypes();
+        $hasMissingDocs = !empty($missingDocs);
+
         return response()->json([
             'found' => true,
             'application_id' => $app->id,
             'application_number' => $app->application_number,
             'programme' => $app->programme->name ?? 'N/A',
+            'admission_type' => $app->admission_type,
             'admission_category' => $app->admission_category,
             'status' => $app->status,
             'current_step' => $app->current_step,
@@ -68,6 +75,10 @@ class PublicPortalController extends Controller
             'has_admission_letter' => (bool) $app->admissionLetter,
             'masked_phone' => $maskedPhone,
             'user_id' => $user->id,
+            'documents_status' => $documentsBreakdown,
+            'has_missing_documents' => $hasMissingDocs,
+            'missing_documents_count' => count($missingDocs),
+            'missing_documents_labels' => array_map(fn($type) => Application::getDocumentTypeLabels()[$type] ?? $type, $missingDocs),
         ]);
     }
 

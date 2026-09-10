@@ -101,4 +101,61 @@ class Application extends Model
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
+
+    public static function getDocumentTypeLabels(): array
+    {
+        return [
+            'csee_certificate' => 'Cheti cha Kidato cha IV (CSEE)',
+            'acsee_certificate' => 'Cheti cha Kidato cha VI (ACSEE)',
+            'diploma_certificate' => 'Cheti cha Stashahada (Diploma)',
+            'transcript' => 'Matokeo / Transcript ya Masomo',
+            'nida_id' => 'Kitambulisho (NIDA / Kura / Kazi)',
+            'passport' => 'Picha ya Pasipoti (Passport Photo)',
+        ];
+    }
+
+    public function getRequiredDocumentTypes(): array
+    {
+        if ($this->admission_type === 'Form Six') {
+            return ['acsee_certificate', 'transcript'];
+        }
+
+        return ['csee_certificate', 'diploma_certificate', 'transcript'];
+    }
+
+    public function getMissingDocumentTypes(): array
+    {
+        $required = $this->getRequiredDocumentTypes();
+        $uploaded = $this->documents()->pluck('document_type')->toArray();
+
+        return array_values(array_diff($required, $uploaded));
+    }
+
+    public function hasAllRequiredDocuments(): bool
+    {
+        return empty($this->getMissingDocumentTypes());
+    }
+
+    public function getDocumentStatusBreakdown(): array
+    {
+        $requiredTypes = $this->getRequiredDocumentTypes();
+        $uploadedDocs = $this->documents->keyBy('document_type');
+        $labels = self::getDocumentTypeLabels();
+
+        $breakdown = [];
+        foreach ($requiredTypes as $type) {
+            $doc = $uploadedDocs->get($type);
+            $breakdown[] = [
+                'type' => $type,
+                'label' => $labels[$type] ?? ucfirst(str_replace('_', ' ', $type)),
+                'is_required' => true,
+                'uploaded' => $doc !== null,
+                'original_filename' => $doc?->original_filename,
+                'verification_status' => $doc?->verification_status ?? 'pending',
+                'rejection_comment' => $doc?->rejection_comment,
+            ];
+        }
+
+        return $breakdown;
+    }
 }

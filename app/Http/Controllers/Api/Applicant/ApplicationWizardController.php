@@ -319,6 +319,17 @@ class ApplicationWizardController extends Controller
             'parent_signature.required' => 'Parent/guardian signature is required.',
         ]);
 
+        $missingDocs = $application->getMissingDocumentTypes();
+        if (!empty($missingDocs)) {
+            $labels = Application::getDocumentTypeLabels();
+            $missingNames = array_map(fn($type) => $labels[$type] ?? $type, $missingDocs);
+
+            return response()->json([
+                'message' => 'Tafadhali pakia vyeti na nyaraka zote zinazohitajika kabla ya kuwasilisha maombi: ' . implode(', ', $missingNames) . '. (Please upload all required certificates before submitting your application.)',
+                'missing_documents' => $missingDocs,
+            ], 422);
+        }
+
         $consentData = [
             'consent_given' => true,
             'ip_address' => $request->ip(),

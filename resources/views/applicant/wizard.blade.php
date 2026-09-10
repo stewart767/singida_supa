@@ -598,7 +598,31 @@
                             return;
                         }
                     }
+                    if (step === 7 && !this.hasRequiredDocs()) {
+                        const missing = this.getMissingDocsList().join(', ');
+                        toast('Tafadhali pakia vyeti vinavyohitajika kwanza (' + missing + ') kabla ya kwenda kwenye tamko la mwisho.', 'error');
+                        this.currentStep = 5;
+                        return;
+                    }
                     this.currentStep = step;
+                },
+                hasRequiredDocs() {
+                    if (this.academic.admission_type === 'Form Six') {
+                        return !!(this.uploadedDocs.form6_diploma?.status && this.uploadedDocs.transcript?.status);
+                    }
+                    return !!(this.uploadedDocs.form4?.status && this.uploadedDocs.form6_diploma?.status && this.uploadedDocs.transcript?.status);
+                },
+                getMissingDocsList() {
+                    let missing = [];
+                    if (this.academic.admission_type === 'Form Six') {
+                        if (!this.uploadedDocs.form6_diploma?.status) missing.push('Cheti cha Form VI (ACSEE)');
+                        if (!this.uploadedDocs.transcript?.status) missing.push('Transcript / Matokeo Form VI');
+                    } else {
+                        if (!this.uploadedDocs.form4?.status) missing.push('Cheti cha Form IV (CSEE)');
+                        if (!this.uploadedDocs.form6_diploma?.status) missing.push('Cheti cha Stashahada / Diploma');
+                        if (!this.uploadedDocs.transcript?.status) missing.push('Transcript Record');
+                    }
+                    return missing;
                 },
                 checklist: {
                     form4: {{ $form4Doc ? 'true' : 'false' }},
@@ -804,6 +828,12 @@
                     }
                     if (this.payment.status !== 'paid') {
                         toast('Huwezi kuwasilisha maombi kabla ya malipo ya ada ya fomu (TZS 20,000) kuthibitishwa na Admin.', 'error');
+                        this.currentStep = 5;
+                        return;
+                    }
+                    if (!this.hasRequiredDocs()) {
+                        const missing = this.getMissingDocsList().join(', ');
+                        toast('Tafadhali pakia vyeti vinavyohitajika: ' + missing + ' kabla ya kuwasilisha maombi.', 'error');
                         this.currentStep = 5;
                         return;
                     }
@@ -2041,7 +2071,7 @@
 
                 <div class="flex justify-between items-center pt-4">
                     <button type="button" @click="currentStep = 6" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Nyuma: Malipo ya Ada</button>
-                    <button type="button" @click="currentStep = 7" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl">Hatua Inayofuata: Tamko la Mwombaji &rarr;</button>
+                    <button type="button" @click="goToStep(7)" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl">Hatua Inayofuata: Tamko la Mwombaji &rarr;</button>
                 </div>
             </div>
 
@@ -2051,6 +2081,24 @@
                     <h3 class="text-xl font-extrabold text-slate-900">Hatua ya 7: Tamko la Mwombaji & Kuwasilisha Maombi</h3>
                     <p class="text-xs text-slate-500">Saini ya tamko rasmi, idhini ya ulinzi wa taarifa binafsi, na kuwasilisha maombi kwenye Ofisi ya Udahili ya OUT / STTC SUPA.</p>
                 </div>
+
+                <!-- Missing Documents Warning Alert -->
+                <template x-if="!hasRequiredDocs()">
+                    <div class="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                        <div class="space-y-1">
+                            <span class="font-extrabold text-amber-950 flex items-center gap-1.5">
+                                <span>⚠️</span>
+                                <span>Vyeti vya Lazima Havijapakiwa (Missing Required Certificates)</span>
+                            </span>
+                            <p class="text-xs text-amber-800">
+                                Kabla ya kuwasilisha maombi, lazima upakie vyeti vifuatavyo: <strong x-text="getMissingDocsList().join(', ')"></strong>.
+                            </p>
+                        </div>
+                        <button type="button" @click="currentStep = 5" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 transition-colors shadow-sm cursor-pointer">
+                            &larr; Pakia Vyeti Sasa
+                        </button>
+                    </div>
+                </template>
 
                 <!-- Privacy Notice Explanatory Box -->
                 <div class="p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-3 text-xs leading-relaxed text-slate-600">
@@ -2201,7 +2249,7 @@
 
                 <div class="flex justify-between items-center pt-4">
                     <button type="button" @click="currentStep = 5" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Nyuma: Weka Vyeti</button>
-                    <button type="button" @click="submitFinal()" :disabled="loading || !consentGiven || payment.status !== 'paid' || (isUnder18() && (!parentConsentGiven || !parentName || !parentSignature))" 
+                    <button type="button" @click="submitFinal()" :disabled="loading || !consentGiven || payment.status !== 'paid' || !hasRequiredDocs() || (isUnder18() && (!parentConsentGiven || !parentName || !parentSignature))" 
                             class="gradient-btn-gold px-10 py-4 rounded-2xl text-slate-950 font-black text-base shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform">
                         <span x-show="!loading">Wasilisha Fomu ya Udahili &rarr;</span>
                         <span x-show="loading" x-cloak>Inawasilisha Maombi...</span>

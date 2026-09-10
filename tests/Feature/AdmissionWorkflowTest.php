@@ -614,5 +614,153 @@ class AdmissionWorkflowTest extends TestCase
         $application = \App\Models\Application::where('applicant_id', $user->applicant->id)->first();
         $this->assertNotNull($application->admissionLetter);
     }
+
+    public function test_final_submission_requires_mandatory_documents()
+    {
+        $applicantUser = User::where('role', 'applicant')->first();
+        $this->actingAs($applicantUser);
+
+        // Reset application
+        if ($applicantUser->applicant) {
+            $app = \App\Models\Application::where('applicant_id', $applicantUser->applicant->id)->latest('id')->first();
+            if ($app) {
+                $app->update(['status' => 'Draft']);
+                $app->documents()->delete();
+            }
+        }
+
+        // 1. Fill personal info
+        $this->postJson('/api/v1/applicant/personal-info', [
+            'gender' => 'male',
+            'date_of_birth' => '2000-01-01',
+            'nida_number' => '20000101123450000112',
+            'region' => 'Singida',
+            'district' => 'Singida',
+            'ward' => 'Majengo',
+            'next_of_kin_name' => 'John Doe',
+            'next_of_kin_phone' => '+255700000000',
+            'next_of_kin_relation' => 'Father',
+        ])->assertStatus(200);
+
+        // 2. Fill academic profile (Form Six)
+        $programme = Programme::first();
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+
+        $this->postJson('/api/v1/applicant/academic-profile', [
+            'admission_type' => 'Form Six',
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'csee_number' => 'S0101/0001/2020',
+            'csee_year' => 2020,
+            'csee_school' => 'Macechu Secondary',
+            'acsee_number' => 'S0101/0001/2023',
+            'acsee_year' => 2023,
+            'acsee_school' => 'Tabora Boys',
+            'acsee_combination' => 'PCB',
+            'acsee_grade1' => 'B',
+            'acsee_grade2' => 'C',
+            'acsee_grade3' => 'D',
+        ])->assertStatus(200);
+
+        // 3. Try to submit without uploading acsee_certificate and transcript -> must fail 422
+        $res = $this->postJson('/api/v1/applicant/submit-final', [
+            'digital_signature' => 'Test Applicant',
+            'confirm_accurate' => true,
+            'read_privacy' => true,
+            'read_terms' => true,
+            'consent_given' => true,
+            'understand_penalty' => true,
+        ]);
+        $res->assertStatus(422)
+            ->assertJsonPath('missing_documents.0', 'acsee_certificate')
+            ->assertJsonPath('missing_documents.1', 'transcript');
+
+        // 4. Upload ACSEE certificate
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->postJson('/applicant/upload-document', [
+            'document_type' => 'acsee_certificate',
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('acsee.pdf', 100, 'application/pdf'),
+        ])->assertStatus(200);
+
+        // Still missing transcript -> must fail 422
+        $res2 = $this->postJson('/api/v1/applicant/submit-final', [
+            'digital_signature' => 'Test Applicant',
+            'confirm_accurate' => true,
+            'read_privacy' => true,
+            'read_terms' => true,
+            'consent_given' => true,
+            'understand_penalty' => true,
+        ]);
+        $res2->assertStatus(422)
+             ->assertJsonPath('missing_documents.0', 'transcript');
+
+        // 5. Upload Transcript
+        $this->postJson('/applicant/upload-document', [
+            'document_type' => 'transcript',
+            'document' => \Illuminate\Http\UploadedFile::fake()->create('transcript.pdf', 100, 'application/pdf'),
+        ])->assertStatus(200);
+
+        // Now submit -> succeeds 200
+        $res3 = $this->postJson('/api/v1/applicant/submit-final', [
+            'digital_signature' => 'Test Applicant',
+            'confirm_accurate' => true,
+            'read_privacy' => true,
+            'read_terms' => true,
+            'consent_given' => true,
+            'understand_penalty' => true,
+        ]);
+        $res3->assertStatus(200);
+
+        $app = \App\Models\Application::where('applicant_id', $applicantUser->applicant->id)->latest('id')->first();
+        $this->assertEquals('SUBMITTED', $app->status);
+    }
+
+    public function test_tracking_endpoint_returns_document_status_breakdown()
+    {
+        $user = User::create([
+            'name' => 'Tracking Test Applicant',
+            'email' => 'track.test.user@example.com',
+            'phone' => '+255799887766',
+            'role' => 'applicant',
+            'is_active' => true,
+            'password' => bcrypt('password'),
+        ]);
+        $applicant = \App\Models\Applicant::create(['user_id' => $user->id]);
+        $programme = Programme::first();
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+
+        $app = \App\Models\Application::create([
+            'applicant_id' => $applicant->id,
+            'application_number' => 'SUPA-2026-999999',
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+            'status' => 'Draft',
+            'current_step' => 1,
+            'completion_percentage' => 14,
+        ]);
+
+        $response = $this->postJson('/api/v1/public/track-application', [
+            'application_number' => $app->application_number,
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonStructure([
+                     'found',
+                     'application_id',
+                     'application_number',
+                     'documents_status',
+                     'has_missing_documents',
+                     'missing_documents_count',
+                     'missing_documents_labels',
+                 ])
+                 ->assertJsonPath('has_missing_documents', true)
+                 ->assertJsonPath('missing_documents_count', 3);
+    }
 }
 
