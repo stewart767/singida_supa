@@ -66,16 +66,19 @@ class SingidaPaymentCallbackController extends Controller
             ], 404);
         }
 
+        $incomingStatus = strtolower((string) ($validated['payment_status'] ?? 'paid'));
+        $isPaid = in_array($incomingStatus, ['paid', 'verified', 'settled', 'completed'], true);
+
         $payment->update([
-            'payment_status' => 'paid',
-            'payment_method' => 'NMB Bank',
+            'payment_status' => $isPaid ? 'paid' : 'pending',
+            'payment_method' => $validated['channel'] ?? 'NMB Bank',
             'transaction_reference' => $validated['receipt'] ?? $payment->transaction_reference,
-            'verified_at' => now(),
+            'verified_at' => $isPaid ? now() : $payment->verified_at,
             'singida_synced' => true,
         ]);
 
         $application = $payment->application;
-        if ($application) {
+        if ($application && $isPaid) {
             $updates = [];
             if (in_array($application->status, ['Draft', 'Pending Payment', 'PAYMENT_PENDING'], true)) {
                 $updates['status'] = 'IN_PROGRESS';

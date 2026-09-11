@@ -136,11 +136,32 @@ class SingidaAdmissionClient
 
             if ($response->successful()) {
                 $json = $response->json();
-                $data = $json['data'] ?? null;
+                $data = $json['data'] ?? $json;
+
                 if (is_array($data)) {
-                    return isset($data[0]) ? $data[0] : null;
+                    // If a sequential array / list of results was returned, find the exact matching item
+                    if (array_is_list($data)) {
+                        foreach ($data as $item) {
+                            if (is_array($item)) {
+                                $matchesControl = !empty($item['control_number']) && (string) $item['control_number'] === (string) $controlNumber;
+                                $matchesRef = !empty($externalReference) && !empty($item['external_reference']) && (string) $item['external_reference'] === (string) $externalReference;
+                                if ($matchesControl || $matchesRef) {
+                                    return $item;
+                                }
+                            }
+                        }
+                        return null;
+                    }
+
+                    // Associative array - verify it matches the requested control number or reference if present
+                    if (!empty($data['control_number']) && (string) $data['control_number'] !== (string) $controlNumber) {
+                        if (empty($externalReference) || (string) ($data['external_reference'] ?? '') !== (string) $externalReference) {
+                            return null;
+                        }
+                    }
+
+                    return $data;
                 }
-                return is_array($json) ? $json : null;
             }
         } catch (\Throwable $e) {
             Log::debug('SingidaAdmissionClient: payment status check skipped/failed: '.$e->getMessage());

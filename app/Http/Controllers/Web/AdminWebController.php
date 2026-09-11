@@ -518,7 +518,7 @@ class AdminWebController extends Controller
                 'application_id' => $application->id,
                 'control_number' => '99' . str_pad((string) rand(1, 9999999999), 10, '0', STR_PAD_LEFT),
                 'amount' => (float) Setting::get('application_fee_default', 20000),
-                'payment_status' => $validated['status'] === 'Approved' ? 'paid' : 'unpaid',
+                'payment_status' => 'pending',
             ]);
 
             if ($validated['status'] === 'Approved') {

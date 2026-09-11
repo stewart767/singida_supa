@@ -461,14 +461,14 @@
                     this.$watch('dob_year', () => this.updateDobString());
 
                     this.$watch('currentStep', (newStep) => {
-                        if (newStep === 6) {
+                        if (newStep === 5) {
                             this.startPaymentAutoDetect();
                         } else {
                             this.stopPaymentAutoDetect();
                         }
                     });
 
-                    if (this.currentStep === 6) {
+                    if (this.currentStep === 5) {
                         this.startPaymentAutoDetect();
                     }
                 },
@@ -508,9 +508,9 @@
                     // Immediate background check
                     this.checkPaymentStatus(false);
 
-                    // Auto-poll status every 4 seconds while on Step 6
+                    // Auto-poll status every 4 seconds while on Step 5
                     this.paymentPollingTimer = setInterval(() => {
-                        if (this.currentStep !== 6 || this.payment.status === 'paid') {
+                        if (this.currentStep !== 5 || this.payment.status === 'paid') {
                             this.stopPaymentAutoDetect();
                             return;
                         }
@@ -567,9 +567,9 @@
                             if (this.payment.status === 'paid') {
                                 this.stopPaymentAutoDetect();
                                 toast('🎉 Hongera! Malipo yako ya TZS 20,000 yamethibitishwa kikamilifu! Unaelekezwa kwenye hatua ya vyeti...', 'success');
-                                if (this.currentStep === 6) {
+                                if (this.currentStep === 5) {
                                     setTimeout(() => {
-                                        this.currentStep = 5;
+                                        this.currentStep = 6;
                                     }, 1000);
                                 }
                             } else if (showToast) {
@@ -593,15 +593,16 @@
                         return;
                     }
                     if (this.payment.status !== 'paid') {
-                        if (step === 5 || step === 7) {
+                        if (step >= 6) {
                             toast('Tafadhali kamilisha malipo ya ada ya fomu kwanza. (Please pay the admission fee first.)', 'error');
+                            this.currentStep = 5;
                             return;
                         }
                     }
                     if (step === 7 && !this.hasRequiredDocs()) {
                         const missing = this.getMissingDocsList().join(', ');
                         toast('Tafadhali pakia vyeti vinavyohitajika kwanza (' + missing + ') kabla ya kwenda kwenye tamko la mwisho.', 'error');
-                        this.currentStep = 5;
+                        this.currentStep = 6;
                         return;
                     }
                     this.currentStep = step;
@@ -834,7 +835,7 @@
                     if (!this.hasRequiredDocs()) {
                         const missing = this.getMissingDocsList().join(', ');
                         toast('Tafadhali pakia vyeti vinavyohitajika: ' + missing + ' kabla ya kuwasilisha maombi.', 'error');
-                        this.currentStep = 5;
+                        this.currentStep = 6;
                         return;
                     }
                     if (this.isUnder18() && (!this.parentConsentGiven || !this.parentName || !this.parentSignature)) {
@@ -970,11 +971,11 @@
                             this.currentStep = 1;
                             toast('Tafadhali ridhia fomu ya ridhaa ya udahili ili kuendelea.', 'error');
                         }
-                        if (value >= 7 && this.payment.status !== 'paid') {
-                            this.currentStep = 6;
-                            toast('Tafadhali kamilisha malipo ya ada ya fomu (TZS 20,000) na usubiri uthibitisho wa Admin ili kuendelea na tamko la mwisho.', 'error');
+                        if (value >= 6 && this.payment.status !== 'paid') {
+                            this.currentStep = 5;
+                            toast('Tafadhali kamilisha malipo ya ada ya fomu (TZS 20,000) kabla ya kupakia vyeti na kuendelea.', 'error');
                         }
-                        if (value === 6) {
+                        if (value === 5) {
                             this.checkPaymentStatus(false);
                         }
                     });
@@ -982,8 +983,8 @@
                     if (this.currentStep > 1 && !this.consentGiven) {
                         this.currentStep = 1;
                     }
-                    if (this.currentStep >= 7 && this.payment.status !== 'paid') {
-                        this.currentStep = 6;
+                    if (this.currentStep >= 6 && this.payment.status !== 'paid') {
+                        this.currentStep = 5;
                     }
                 },
 
@@ -1045,7 +1046,7 @@
                                 this.payment.rejection_reason = res.data.application.payment.rejection_reason || '';
                             }
                             toast('Programu imehifadhiwa! Sasa kamilisha malipo ya fomu (TZS 20,000).', 'success');
-                            this.currentStep = (this.payment.status === 'paid') ? 5 : 6;
+                            this.currentStep = (this.payment.status === 'paid') ? 6 : 5;
                         })
                         .catch(err => {
                             this.loading = false;
@@ -1110,7 +1111,7 @@
                 <div>
                     <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">Admission Timeline</span>
                     <h2 class="text-base font-extrabold text-slate-900"
-                        x-text="currentStep === 1 ? 'Step 1: Account Verification' : (currentStep === 2 ? 'Step 2: Taarifa Binafsi za Mwombaji' : (currentStep === 3 ? 'Step 3: Taarifa za Taaluma na Elimu' : (currentStep === 4 ? 'Step 4: Uchaguzi wa Programu na Kundi' : (currentStep === 5 ? 'Step 5: Orodha ya Vyeti na Nyaraka' : (currentStep === 6 ? 'Step 6: Malipo ya Ada ya Fomu (TZS 20,000)' : 'Hatua ya 7: Tamko la Mwombaji & Kuwasilisha Maombi')))))">
+                        x-text="currentStep === 1 ? 'Step 1: Account Verification' : (currentStep === 2 ? 'Step 2: Taarifa Binafsi za Mwombaji' : (currentStep === 3 ? 'Step 3: Taarifa za Taaluma na Elimu' : (currentStep === 4 ? 'Step 4: Uchaguzi wa Programu na Kundi' : (currentStep === 5 ? 'Step 5: Malipo ya Ada ya Fomu (TZS 20,000)' : (currentStep === 6 ? 'Step 6: Orodha ya Vyeti na Nyaraka' : 'Hatua ya 7: Tamko la Mwombaji & Kuwasilisha Maombi')))))">
                     </h2>
                 </div>
                 <span class="px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-600 font-extrabold text-xs border border-amber-500/30">
@@ -1126,10 +1127,10 @@
             <!-- Interactive Step Indicator Circles -->
             <div class="hidden sm:flex justify-between text-xs font-bold text-slate-500">
                 <template x-for="i in 7" :key="i">
-                    <button @click="goToStep(i)" :disabled="payment.status !== 'paid' && (i === 5 || i === 7)" class="flex flex-col items-center gap-1.5 focus:outline-none disabled:opacity-50">
+                    <button @click="goToStep(i)" :disabled="payment.status !== 'paid' && i >= 6" class="flex flex-col items-center gap-1.5 focus:outline-none disabled:opacity-50">
                         <div class="w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-xs transition-all"
-                             :class="i === currentStep ? 'bg-amber-500 text-slate-950 shadow-md ring-4 ring-amber-500/20' : (i < currentStep ? 'bg-emerald-600 text-white' : (payment.status !== 'paid' && (i === 5 || i === 7) ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 text-slate-500'))">
-                            <span x-text="payment.status !== 'paid' && (i === 5 || i === 7) ? '🔒' : (i < currentStep ? '✓' : i)"></span>
+                             :class="i === currentStep ? 'bg-amber-500 text-slate-950 shadow-md ring-4 ring-amber-500/20' : (i < currentStep ? 'bg-emerald-600 text-white' : (payment.status !== 'paid' && i >= 6 ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 text-slate-500'))">
+                            <span x-text="payment.status !== 'paid' && i >= 6 ? '🔒' : (i < currentStep ? '✓' : i)"></span>
                         </div>
                         <span class="text-[10px]" :class="i === currentStep ? 'text-amber-500 font-black' : ''" x-text="'Step ' + i"></span>
                     </button>
@@ -1606,11 +1607,11 @@
                 </div>
             </div>
 
-            <!-- Step 6: Automatic Payment Detection (TZS 20,000) -->
-            <div x-show="currentStep === 6" x-cloak class="space-y-6">
+            <!-- Step 5: Automatic Payment Detection (TZS 20,000) -->
+            <div x-show="currentStep === 5" x-cloak class="space-y-6">
                 <div class="border-b border-slate-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h3 class="text-xl font-extrabold text-slate-900">Step 6: Malipo ya Ada ya Fomu ya Maombi (TZS 20,000/=)</h3>
+                        <h3 class="text-xl font-extrabold text-slate-900">Step 5: Malipo ya Ada ya Fomu ya Maombi (TZS 20,000/=)</h3>
                         <p class="text-xs text-slate-500">Lipia ada ya fomu ya maombi ya TZS 20,000 kwa kutumia NMB Control Number hapo chini. Mfumo utatambua malipo yako kiotomatiki mara tu utakapokamilisha malipo kupitia simu au benki bila kuhitaji kupakia risiti yoyote.</p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
@@ -1814,12 +1815,12 @@
                                     <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 block">Uthibitisho wa Malipo</span>
                                     <h4 class="text-lg font-black text-emerald-900">Malipo ya TZS 20,000 Yamethibitishwa Kikamilifu!</h4>
                                     <p class="text-xs text-emerald-800">
-                                        Mfumo umepokea na kuthibitisha ada yako ya maombi. Unaweza kuendelea sasa kwenye hatua ya tamko la mwombaji.
+                                        Mfumo umepokea na kuthibitisha ada yako ya maombi. Unaweza kuendelea sasa kwenye hatua ya kupakia vyeti na nyaraka.
                                     </p>
                                 </div>
                             </div>
-                            <button type="button" @click="currentStep = 7" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl shrink-0">
-                                Next: Tamko la Mwombaji &rarr;
+                            <button type="button" @click="currentStep = 6" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl shrink-0">
+                                Next: Weka Vyeti &rarr;
                             </button>
                         </div>
                     </template>
@@ -1838,7 +1839,7 @@
                                             Mfumo Unasubiri Malipo Yako Kiotomatiki (Live Detection Active)
                                         </h4>
                                         <p class="text-xs text-slate-600">
-                                            Lipa TZS 20,000 kupitia Control Number hapo juu. Mfumo unakagua mtandao wa NMB kila baada ya sekunde chache na utakupeleka kwenye hatua ya tamko kiotomatiki mara tu unapomaliza kulipa.
+                                            Lipa TZS 20,000 kupitia Control Number hapo juu. Mfumo unakagua mtandao wa NMB kila baada ya sekunde chache na utakupeleka kwenye hatua ya vyeti kiotomatiki mara tu unapomaliza kulipa.
                                         </p>
                                     </div>
                                 </div>
@@ -1866,11 +1867,11 @@
                 </div>
 
                 <div class="flex justify-between items-center pt-4">
-                    <button type="button" @click="currentStep = (payment.status === 'paid' ? 5 : 4)" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold" x-text="payment.status === 'paid' ? 'Back: Weka Vyeti' : 'Back: Uchaguzi wa Programu'"></button>
+                    <button type="button" @click="currentStep = 4" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Back: Uchaguzi wa Programu</button>
                     
-                    <!-- If Payment Verified, Allow proceeding to Step 5 -->
+                    <!-- If Payment Verified, Allow proceeding to Step 6 -->
                     <template x-if="payment.status === 'paid'">
-                        <button type="button" @click="currentStep = 5" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl flex items-center gap-2">
+                        <button type="button" @click="currentStep = 6" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl flex items-center gap-2">
                             <span>Next: Pakia Vyeti / Upload Certificates &rarr;</span>
                         </button>
                     </template>
@@ -1884,12 +1885,12 @@
                 </div>
             </div>
 
-            <!-- Step 5: Document Upload & Checklist -->
-            <div x-show="currentStep === 5" x-cloak class="space-y-6">
+            <!-- Step 6: Document Upload & Checklist -->
+            <div x-show="currentStep === 6" x-cloak class="space-y-6">
                 <div class="border-b border-slate-100 pb-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 class="text-xl font-extrabold text-slate-900">Step 5: Orodha ya Vyeti na Nyaraka (Certificates & Documents)</h3>
+                            <h3 class="text-xl font-extrabold text-slate-900">Step 6: Orodha ya Vyeti na Nyaraka (Certificates & Documents)</h3>
                             <p class="text-xs text-slate-500" x-text="academic.admission_type === 'Form Six' ? 'Sehemu ya 4: Pakia Cheti chako cha Kidato cha Sita (Form VI / ACSEE) na Matokeo (Transcript) ili kukamilisha maombi.' : 'Sehemu ya 4: Pakia vyeti na nyaraka zako zote zinazohitajika kukamilisha maombi ya udahili.'"></p>
                         </div>
                         <span class="px-3.5 py-1.5 rounded-full bg-blue-100 text-blue-800 text-xs font-extrabold uppercase shrink-0">
@@ -2070,7 +2071,7 @@
                 </div>
 
                 <div class="flex justify-between items-center pt-4">
-                    <button type="button" @click="currentStep = 6" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Nyuma: Malipo ya Ada</button>
+                    <button type="button" @click="currentStep = 5" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Nyuma: Malipo ya Ada</button>
                     <button type="button" @click="goToStep(7)" class="gradient-btn px-8 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-xl">Hatua Inayofuata: Tamko la Mwombaji &rarr;</button>
                 </div>
             </div>
@@ -2094,7 +2095,7 @@
                                 Kabla ya kuwasilisha maombi, lazima upakie vyeti vifuatavyo: <strong x-text="getMissingDocsList().join(', ')"></strong>.
                             </p>
                         </div>
-                        <button type="button" @click="currentStep = 5" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 transition-colors shadow-sm cursor-pointer">
+                        <button type="button" @click="currentStep = 6" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 transition-colors shadow-sm cursor-pointer">
                             &larr; Pakia Vyeti Sasa
                         </button>
                     </div>
@@ -2248,7 +2249,7 @@
                 </div>
 
                 <div class="flex justify-between items-center pt-4">
-                    <button type="button" @click="currentStep = 5" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Nyuma: Weka Vyeti</button>
+                    <button type="button" @click="currentStep = 6" class="px-6 py-3.5 rounded-2xl bg-slate-200 text-xs font-extrabold">Nyuma: Weka Vyeti</button>
                     <button type="button" @click="submitFinal()" :disabled="loading || !consentGiven || payment.status !== 'paid' || !hasRequiredDocs() || (isUnder18() && (!parentConsentGiven || !parentName || !parentSignature))" 
                             class="gradient-btn-gold px-10 py-4 rounded-2xl text-slate-950 font-black text-base shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform">
                         <span x-show="!loading">Wasilisha Fomu ya Udahili &rarr;</span>

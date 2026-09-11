@@ -230,14 +230,20 @@ class ApplicationWizardController extends Controller
                     $application->application_number
                 );
 
-                if ($singidaStatus && (
-                    in_array(strtolower($singidaStatus['status'] ?? ''), ['paid', 'completed', 'verified'], true) ||
-                    in_array(strtolower($singidaStatus['payment_status'] ?? ''), ['paid', 'completed', 'verified'], true) ||
-                    ($singidaStatus['is_paid'] ?? false) === true
-                )) {
+                $isPaid = false;
+                if ($singidaStatus && is_array($singidaStatus)) {
+                    $rawPaymentStatus = strtolower((string) ($singidaStatus['payment_status'] ?? ''));
+                    $isPaidFlag = $singidaStatus['is_paid'] ?? null;
+
+                    if (in_array($rawPaymentStatus, ['paid', 'verified', 'settled', 'completed'], true) || $isPaidFlag === true || $isPaidFlag === 1 || $isPaidFlag === '1') {
+                        $isPaid = true;
+                    }
+                }
+
+                if ($isPaid) {
                     $payment->update([
                         'payment_status' => 'paid',
-                        'payment_method' => $singidaStatus['payment_method'] ?? 'NMB Bank',
+                        'payment_method' => $singidaStatus['payment_method'] ?? $singidaStatus['channel'] ?? 'NMB Bank',
                         'transaction_reference' => $singidaStatus['receipt'] ?? $singidaStatus['transaction_reference'] ?? $payment->transaction_reference,
                         'verified_at' => now(),
                         'singida_synced' => true,
