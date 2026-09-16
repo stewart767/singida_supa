@@ -36,12 +36,9 @@ class SingidaPaymentCallbackController extends Controller
             'paid_at' => ['nullable', 'date'],
         ]);
 
-        $payment = Payment::query()
-            ->with('application')
-            ->where('control_number', $validated['control_number'])
-            ->first();
+        $payment = null;
 
-        if (! $payment && ! empty($validated['external_application_id'])) {
+        if (! empty($validated['external_application_id'])) {
             $payment = Payment::query()
                 ->with('application')
                 ->where('application_id', $validated['external_application_id'])
@@ -54,6 +51,13 @@ class SingidaPaymentCallbackController extends Controller
                 ->whereHas('application', function ($q) use ($validated) {
                     $q->where('application_number', $validated['external_reference']);
                 })
+                ->first();
+        }
+
+        if (! $payment) {
+            $payment = Payment::query()
+                ->with('application')
+                ->where('control_number', $validated['control_number'])
                 ->first();
         }
 

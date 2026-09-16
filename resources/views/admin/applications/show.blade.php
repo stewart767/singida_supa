@@ -84,6 +84,30 @@
                 this.syncingSingida = false;
                 toast(err.response?.data?.message || 'Failed to sync with Singida.', 'error');
             });
+        },
+
+        approvePaymentModal: false,
+        approvingPaymentLoading: false,
+        paymentMethodOverride: 'NMB Bank',
+        paymentRefOverride: 'SUPA-APPR-' + Math.floor(100000 + Math.random() * 900000),
+
+        approveApplicationPayment(paymentId) {
+            this.approvingPaymentLoading = true;
+            axios.post('{{ url('/api/v1/admin/payments') }}/' + paymentId + '/verify', {
+                status: 'paid',
+                payment_method: this.paymentMethodOverride,
+                transaction_reference: this.paymentRefOverride
+            })
+            .then(res => {
+                this.approvingPaymentLoading = false;
+                this.approvePaymentModal = false;
+                toast(res.data?.message || 'Payment successfully approved!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            })
+            .catch(err => {
+                this.approvingPaymentLoading = false;
+                toast(err.response?.data?.message || 'Failed to approve payment.', 'error');
+            });
         }
     }">
 
@@ -462,12 +486,24 @@
 
                             @if($application->payment->payment_status === 'paid')
                                 <span class="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold text-xs flex items-center gap-1.5 shadow-sm">
-                                    <span class="text-emerald-600 font-black">✓</span> Auto-Verified via Banking Gateway
+                                    <span class="text-emerald-600 font-black">✓</span> 
+                                    @if($application->payment->verifier)
+                                        Verified by Superadmin ({{ $application->payment->verifier->name }})
+                                    @else
+                                        Auto-Verified via Banking Gateway
+                                    @endif
                                 </span>
                             @else
-                                <span class="px-4 py-2 rounded-xl bg-amber-100 text-amber-900 font-extrabold text-xs flex items-center gap-1.5 shadow-sm">
-                                    <span class="text-amber-600 font-black">⏳</span> Awaiting Payment Detection
-                                </span>
+                                @if(auth()->user()->isSuperAdmin())
+                                    <button type="button" @click="approvePaymentModal = true" 
+                                            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shrink-0 flex items-center gap-1.5 transition-all hover:scale-105">
+                                        <span>✓</span> Approve Payment (Superadmin)
+                                    </button>
+                                @else
+                                    <span class="px-4 py-2 rounded-xl bg-amber-100 text-amber-900 font-extrabold text-xs flex items-center gap-1.5 shadow-sm">
+                                        <span class="text-amber-600 font-black">⏳</span> Awaiting Payment Detection
+                                    </span>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -623,6 +659,71 @@
                 </div>
             </div>
         </div>
+
+        @if($application->payment && auth()->user()->isSuperAdmin())
+        <!-- SUPERADMIN APPROVE PAYMENT MODAL -->
+        <div x-show="approvePaymentModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+            <div class="bg-white max-w-lg w-full p-8 rounded-3xl shadow-2xl border border-slate-200 space-y-5 text-left">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl font-black">
+                        ✓
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-extrabold text-slate-900">Approve Application Fee Payment</h3>
+                        <p class="text-xs text-slate-500">Superadmin Manual Verification Override</p>
+                    </div>
+                </div>
+
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                    <div class="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span class="text-slate-500 font-bold">Applicant:</span>
+                        <strong class="text-slate-900 font-extrabold">{{ $application->applicant->user->name ?? 'N/A' }}</strong>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span class="text-slate-500 font-bold">Control Number:</span>
+                        <strong class="text-blue-600 font-mono font-black">{{ $application->payment->control_number }}</strong>
+                    </div>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-slate-500 font-bold">Fee Amount:</span>
+                        <strong class="text-emerald-700 font-black text-sm">TZS {{ number_format($application->payment->amount) }}</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-extrabold uppercase mb-1 text-slate-700">Payment Channel</label>
+                        <select x-model="paymentMethodOverride" class="w-full p-3 rounded-2xl border border-slate-300 bg-white font-bold text-xs">
+                            <option value="NMB Bank">NMB Bank Branch</option>
+                            <option value="M-Pesa">M-Pesa Mobile Money</option>
+                            <option value="TigoPesa">TigoPesa Mobile Money</option>
+                            <option value="Airtel Money">Airtel Money</option>
+                            <option value="CRDB Bank">CRDB Bank</option>
+                            <option value="Bank Transfer">Direct Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-extrabold uppercase mb-1 text-slate-700">Ref / Receipt #</label>
+                        <input type="text" x-model="paymentRefOverride" placeholder="e.g. NMB-TRX-10294" class="w-full p-3 rounded-2xl border border-slate-300 bg-white font-mono font-bold text-xs">
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Approving this payment will mark the payment as <strong>PAID</strong> and advance the applicant's status to <strong>IN_PROGRESS</strong>.</span>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" @click="approvePaymentModal = false" class="px-5 py-2.5 rounded-2xl bg-slate-200 text-xs font-extrabold hover:bg-slate-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" @click="approveApplicationPayment({{ $application->payment->id }})" :disabled="approvingPaymentLoading" class="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md disabled:opacity-60 transition-all flex items-center gap-2">
+                        <span x-show="!approvingPaymentLoading">✓ Confirm & Approve Payment</span>
+                        <span x-show="approvingPaymentLoading">Approving...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        @endif
 
     </div>
 </x-app-layout>

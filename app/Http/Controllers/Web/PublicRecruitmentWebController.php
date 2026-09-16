@@ -222,7 +222,7 @@ class PublicRecruitmentWebController extends Controller
             $cvPath = $request->file('cv_file')->store('applications/cvs', 'public');
         }
 
-        $appNumber = 'SUPA-JOB-' . date('Y') . '-' . str_pad((string) (JobApplication::count() + 1), 6, '0', STR_PAD_LEFT);
+        $appNumber = JobApplication::generateUniqueApplicationNumber();
 
         $application = JobApplication::create([
             'application_number' => $appNumber,
@@ -387,7 +387,7 @@ class PublicRecruitmentWebController extends Controller
             $userId = Auth::id();
 
             if (!$application) {
-                $appNumber = 'SUPA-JOB-' . date('Y') . '-' . str_pad((string) (JobApplication::count() + 1), 6, '0', STR_PAD_LEFT);
+                $appNumber = JobApplication::generateUniqueApplicationNumber();
                 $application = JobApplication::create([
                     'application_number' => $appNumber,
                     'user_id' => $userId,

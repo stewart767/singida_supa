@@ -40,7 +40,11 @@ class AdminPermissionMiddleware
                     break;
 
                 case 'payments':
-                    abort_unless($user->hasPermissionTo('verify_payments'), 403);
+                    abort_unless($user->hasPermissionTo('verify_payments') || $user->isSuperAdmin(), 403);
+                    break;
+
+                case 'verifyPayment':
+                    abort_unless($user->isSuperAdmin(), 403, 'Only Superadmin has authorization to approve payments.');
                     break;
 
                 case 'programmes':

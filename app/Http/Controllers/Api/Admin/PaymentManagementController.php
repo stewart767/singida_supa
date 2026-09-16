@@ -41,8 +41,36 @@ class PaymentManagementController extends Controller
 
     public function verify(Request $request, Payment $payment): JsonResponse
     {
+        $this->authorize('verify', $payment);
+
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:paid,rejected,pending,cancelled'],
+            'rejection_reason' => ['nullable', 'string', 'max:500'],
+            'payment_method' => ['nullable', 'string', 'max:100'],
+            'transaction_reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        if (!empty($validated['payment_method'])) {
+            $payment->payment_method = $validated['payment_method'];
+        }
+        if (!empty($validated['transaction_reference'])) {
+            $payment->transaction_reference = $validated['transaction_reference'];
+        }
+        $payment->save();
+
+        $updatedPayment = $this->paymentService->verifyPayment(
+            $payment,
+            Auth::user(),
+            $validated['status'],
+            $validated['rejection_reason'] ?? null
+        );
+
         return response()->json([
-            'message' => 'Manual payment verification is disabled. Payments are automatically verified via the banking gateway.',
-        ], 403);
+            'success' => true,
+            'message' => $validated['status'] === 'paid'
+                ? "Payment of TZS " . number_format($updatedPayment->amount) . " (Control #: {$updatedPayment->control_number}) successfully approved!"
+                : "Payment status updated to " . ucfirst($validated['status']),
+            'data' => new PaymentResource($updatedPayment),
+        ]);
     }
 }

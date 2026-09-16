@@ -487,9 +487,7 @@ class AdminWebController extends Controller
             ]);
 
 
-            $year = date('Y');
-            $count = Application::whereYear('created_at', $year)->count() + 1;
-            $appNumber = 'SUPA-' . $year . '-' . str_pad((string) $count, 6, '0', STR_PAD_LEFT);
+            $appNumber = \App\Services\ApplicationWorkflowService::generateUniqueApplicationNumber();
 
             $application = Application::create([
                 'application_number' => $appNumber,
@@ -579,6 +577,48 @@ class AdminWebController extends Controller
         $payments = $query->paginate(15);
         $filters = $request->only(['search', 'status']);
         return view('admin.payments.index', compact('payments', 'filters'));
+    }
+
+    public function verifyPayment(Request $request, Payment $payment)
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Only Superadmin has authorization to approve payments.');
+
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:paid,rejected,pending,cancelled'],
+            'rejection_reason' => ['nullable', 'string', 'max:500'],
+            'payment_method' => ['nullable', 'string', 'max:100'],
+            'transaction_reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        if (!empty($validated['payment_method'])) {
+            $payment->payment_method = $validated['payment_method'];
+        }
+        if (!empty($validated['transaction_reference'])) {
+            $payment->transaction_reference = $validated['transaction_reference'];
+        }
+        $payment->save();
+
+        $service = app(\App\Services\PaymentVerificationService::class);
+        $updatedPayment = $service->verifyPayment(
+            $payment,
+            auth()->user(),
+            $validated['status'],
+            $validated['rejection_reason'] ?? null
+        );
+
+        $msg = $validated['status'] === 'paid'
+            ? "Payment of TZS " . number_format($updatedPayment->amount) . " (Control #: {$updatedPayment->control_number}) successfully approved!"
+            : "Payment status updated to " . ucfirst($validated['status']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'payment' => $updatedPayment
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     public function programmes()

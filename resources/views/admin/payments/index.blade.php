@@ -6,10 +6,16 @@
     <div class="w-full space-y-8" x-data="{
         search: '{{ $filters['search'] ?? '' }}',
         statusFilter: '{{ $filters['status'] ?? '' }}',
+        isSuperAdmin: {{ auth()->user()->isSuperAdmin() ? 'true' : 'false' }},
         showCreateModal: false,
         showEditModal: false,
         showDeleteModal: false,
+        showApproveModal: false,
         selectedPayment: null,
+        approvingPayment: null,
+        approvingLoading: false,
+        approvalMethod: 'NMB Bank',
+        approvalRef: '',
 
         paymentsList: [
             @foreach($payments as $p)
@@ -41,6 +47,43 @@
                 const matchQuery = !this.search.trim() || p.control_number.includes(this.search) || p.applicant_name.toLowerCase().includes(this.search.toLowerCase());
                 const matchStatus = !this.statusFilter || p.payment_status.toLowerCase() === this.statusFilter.toLowerCase();
                 return matchQuery && matchStatus;
+            });
+        },
+
+        openApprove(p) {
+            if (!this.isSuperAdmin) {
+                toast('Only Superadmin has authorization to approve payments.', 'error');
+                return;
+            }
+            this.approvingPayment = p;
+            this.approvalMethod = p.payment_method || 'NMB Bank';
+            this.approvalRef = 'SUPA-APPR-' + Math.floor(100000 + Math.random() * 900000);
+            this.showApproveModal = true;
+        },
+
+        confirmApprove() {
+            if (!this.approvingPayment || !this.isSuperAdmin) return;
+            this.approvingLoading = true;
+            axios.post('{{ url('/api/v1/admin/payments') }}/' + this.approvingPayment.id + '/verify', {
+                status: 'paid',
+                payment_method: this.approvalMethod,
+                transaction_reference: this.approvalRef
+            })
+            .then(res => {
+                this.approvingLoading = false;
+                this.showApproveModal = false;
+                const idx = this.paymentsList.findIndex(p => p.id === this.approvingPayment.id);
+                if (idx !== -1) {
+                    this.paymentsList[idx].payment_status = 'paid';
+                    this.paymentsList[idx].payment_method = this.approvalMethod;
+                    this.paymentsList[idx].paid_at = new Date().toLocaleString();
+                }
+                toast(res.data?.message || 'Payment approved successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            })
+            .catch(err => {
+                this.approvingLoading = false;
+                toast(err.response?.data?.message || 'Failed to approve payment.', 'error');
             });
         },
 
@@ -161,7 +204,14 @@
                                 </span>
                             </td>
                             <td class="py-4 px-4 text-[10px] text-slate-500 font-bold" x-text="p.paid_at"></td>
-                            <td class="py-4 px-4 text-right space-x-1">
+                            <td class="py-4 px-4 text-right space-x-1 whitespace-nowrap">
+                                @if(auth()->user()->isSuperAdmin())
+                                    <template x-if="p.payment_status !== 'paid'">
+                                        <button @click="openApprove(p)" class="px-3 py-1.5 rounded-xl bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600 hover:text-white font-extrabold text-[10px] transition-all inline-flex items-center gap-1 shadow-sm">
+                                            <span>✓</span> Approve
+                                        </button>
+                                    </template>
+                                @endif
                                 <button @click="openEdit(p)" class="px-3 py-1.5 rounded-xl bg-blue-600/10 text-blue-600 hover:bg-blue-600 hover:text-white font-extrabold text-[10px] transition-all">
                                     Edit
                                 </button>
@@ -270,6 +320,75 @@
                 </div>
             </div>
         </div>
+
+        @if(auth()->user()->isSuperAdmin())
+        <!-- SUPERADMIN APPROVE PAYMENT MODAL -->
+        <div x-show="showApproveModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+            <div class="bg-white max-w-lg w-full p-8 rounded-3xl shadow-2xl border border-slate-200 space-y-5 text-left">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl font-black">
+                        ✓
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-extrabold text-slate-900">Approve Application Payment</h3>
+                        <p class="text-xs text-slate-500">Superadmin Manual Verification & Admission Advancement</p>
+                    </div>
+                </div>
+
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                    <div class="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span class="text-slate-500 font-bold">Applicant:</span>
+                        <strong class="text-slate-900 font-extrabold" x-text="approvingPayment?.applicant_name"></strong>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span class="text-slate-500 font-bold">Control Number:</span>
+                        <strong class="text-blue-600 font-mono font-black" x-text="approvingPayment?.control_number"></strong>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span class="text-slate-500 font-bold">Programme:</span>
+                        <strong class="text-slate-900 font-bold" x-text="approvingPayment?.programme"></strong>
+                    </div>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-slate-500 font-bold">Amount to Verify:</span>
+                        <strong class="text-emerald-700 font-black text-sm" x-text="(approvingPayment?.currency || 'TZS') + ' ' + Number(approvingPayment?.amount || 20000).toLocaleString()"></strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-extrabold uppercase mb-1 text-slate-700">Payment Channel</label>
+                        <select x-model="approvalMethod" class="w-full p-3 rounded-2xl border border-slate-300 bg-white font-bold text-xs">
+                            <option value="NMB Bank">NMB Bank Branch</option>
+                            <option value="M-Pesa">M-Pesa Mobile Money</option>
+                            <option value="TigoPesa">TigoPesa Mobile Money</option>
+                            <option value="Airtel Money">Airtel Money</option>
+                            <option value="CRDB Bank">CRDB Bank</option>
+                            <option value="Bank Transfer">Direct Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-extrabold uppercase mb-1 text-slate-700">Ref / Receipt #</label>
+                        <input type="text" x-model="approvalRef" placeholder="e.g. NMB-TRX-10294" class="w-full p-3 rounded-2xl border border-slate-300 bg-white font-mono font-bold text-xs">
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-semibold flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Approving this payment will mark it as <strong>PAID</strong> and advance the applicant's status to <strong>IN_PROGRESS</strong>.</span>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" @click="showApproveModal = false" class="px-5 py-2.5 rounded-2xl bg-slate-200 text-xs font-extrabold hover:bg-slate-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" @click="confirmApprove()" :disabled="approvingLoading" class="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md disabled:opacity-60 transition-all flex items-center gap-2">
+                        <span x-show="!approvingLoading">✓ Confirm & Approve Payment</span>
+                        <span x-show="approvingLoading">Approving...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        @endif
 
     </div>
 </x-app-layout>

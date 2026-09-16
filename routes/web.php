@@ -114,6 +114,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminPermissionMiddleware::class
     Route::post('/documents/{document}/replace', [AdminWebController::class, 'replaceApplicationDocument'])->name('admin.documents.replace');
     Route::delete('/documents/{document}', [AdminWebController::class, 'deleteApplicationDocument'])->name('admin.documents.destroy');
     Route::get('/payments', [AdminWebController::class, 'payments'])->name('admin.payments.index');
+    Route::post('/payments/{payment}/verify', [AdminWebController::class, 'verifyPayment'])->name('admin.payments.verify');
     Route::get('/programmes', [AdminWebController::class, 'programmes'])->name('admin.programmes.index');
     Route::post('/programmes', [AdminWebController::class, 'storeProgramme'])->name('admin.programmes.store');
     Route::put('/programmes/{programme}', [AdminWebController::class, 'updateProgramme'])->name('admin.programmes.update');

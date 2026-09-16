@@ -92,9 +92,7 @@ class ApplicationWorkflowService
                 return $application->fresh(['payment']);
             }
 
-            $year = date('Y');
-            $count = Application::whereYear('created_at', $year)->count() + 1;
-            $appNumber = 'SUPA-' . $year . '-' . str_pad((string) $count, 6, '0', STR_PAD_LEFT);
+            $appNumber = self::generateUniqueApplicationNumber();
 
             $isPublic = false;
             if ($applicant->user) {
@@ -430,5 +428,44 @@ class ApplicationWorkflowService
             'browser_name' => $browser,
             'operating_system' => $os,
         ];
+    }
+
+    /**
+     * Generate a guaranteed unique, sequential application number formatted as SUPA-YYYY-XXXXXX.
+     */
+    public static function generateUniqueApplicationNumber(?int $year = null): string
+    {
+        $year = $year ?: (int) date('Y');
+        $prefix = "SUPA-{$year}-";
+
+        // Extract maximum numerical sequence for the given year
+        $maxSeq = 0;
+
+        $existingNumbers = Application::query()
+            ->where(function ($q) use ($year) {
+                $q->where('application_number', 'like', "SUPA-{$year}-%")
+                  ->orWhere('application_number', 'like', "SUPA/{$year}/%");
+            })
+            ->pluck('application_number');
+
+        foreach ($existingNumbers as $num) {
+            if (preg_match('/(\d+)$/', (string) $num, $matches)) {
+                $val = (int) $matches[1];
+                if ($val > $maxSeq) {
+                    $maxSeq = $val;
+                }
+            }
+        }
+
+        $nextSeq = $maxSeq + 1;
+
+        // Collision-free loop
+        while (true) {
+            $candidate = $prefix . str_pad((string) $nextSeq, 6, '0', STR_PAD_LEFT);
+            if (! Application::where('application_number', $candidate)->exists()) {
+                return $candidate;
+            }
+            $nextSeq++;
+        }
     }
 }
