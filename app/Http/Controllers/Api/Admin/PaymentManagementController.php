@@ -73,4 +73,54 @@ class PaymentManagementController extends Controller
             'data' => new PaymentResource($updatedPayment),
         ]);
     }
+
+    public function duplicates(): JsonResponse
+    {
+        $this->authorize('viewAny', Payment::class);
+
+        $summary = $this->paymentService->getDuplicateControlNumbersSummary();
+
+        return response()->json([
+            'success' => true,
+            'count' => $summary->count(),
+            'data' => $summary,
+        ]);
+    }
+
+    public function regenerateControlNumber(Request $request, Payment $payment): JsonResponse
+    {
+        $this->authorize('regenerate', $payment);
+
+        $validated = $request->validate([
+            'custom_control_number' => ['nullable', 'string', 'max:50'],
+            'reason' => ['nullable', 'string', 'max:255'],
+            'force' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $oldCn = $payment->control_number;
+            $updatedPayment = $this->paymentService->regenerateControlNumber(
+                $payment,
+                Auth::user(),
+                $validated['custom_control_number'] ?? null,
+                $validated['reason'] ?? null,
+                (bool) ($validated['force'] ?? false)
+            );
+
+            $applicantName = $updatedPayment->application?->applicant?->user?->name ?? 'Applicant';
+
+            return response()->json([
+                'success' => true,
+                'message' => "Control number successfully updated from '{$oldCn}' to '{$updatedPayment->control_number}' for {$applicantName}.",
+                'data' => new PaymentResource($updatedPayment),
+                'old_control_number' => $oldCn,
+                'new_control_number' => $updatedPayment->control_number,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 }

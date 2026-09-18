@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('application_id')->constrained()->onDelete('cascade');
-            $table->string('control_number')->unique()->comment('99100... control number format');
+            $table->string('control_number')->index()->comment('99100... control number format');
             $table->decimal('amount', 12, 2)->default(20000.00);
             $table->string('currency', 3)->default('TZS');
             $table->enum('payment_status', ['pending', 'paid', 'rejected'])->default('pending');

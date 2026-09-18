@@ -115,6 +115,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminPermissionMiddleware::class
     Route::delete('/documents/{document}', [AdminWebController::class, 'deleteApplicationDocument'])->name('admin.documents.destroy');
     Route::get('/payments', [AdminWebController::class, 'payments'])->name('admin.payments.index');
     Route::post('/payments/{payment}/verify', [AdminWebController::class, 'verifyPayment'])->name('admin.payments.verify');
+    Route::post('/payments/{payment}/regenerate-control-number', [AdminWebController::class, 'regenerateControlNumber'])->name('admin.payments.regenerate-control-number');
     Route::get('/programmes', [AdminWebController::class, 'programmes'])->name('admin.programmes.index');
     Route::post('/programmes', [AdminWebController::class, 'storeProgramme'])->name('admin.programmes.store');
     Route::put('/programmes/{programme}', [AdminWebController::class, 'updateProgramme'])->name('admin.programmes.update');
@@ -232,7 +233,9 @@ Route::prefix('api/v1/admin')->middleware(['auth'])->group(function () {
     Route::post('/applications/bulk-approve', [ApplicationManagementController::class, 'bulkApprove']);
 
     Route::get('/payments', [PaymentManagementController::class, 'index']);
+    Route::get('/payments/duplicates', [PaymentManagementController::class, 'duplicates']);
     Route::post('/payments/{payment}/verify', [PaymentManagementController::class, 'verify']);
+    Route::post('/payments/{payment}/regenerate-control-number', [PaymentManagementController::class, 'regenerateControlNumber']);
 
     Route::apiResource('programmes', ProgrammeController::class);
 });

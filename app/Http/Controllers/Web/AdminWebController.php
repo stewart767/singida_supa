@@ -556,7 +556,16 @@ class AdminWebController extends Controller
 
     public function payments(Request $request)
     {
+        $service = app(\App\Services\PaymentVerificationService::class);
+        $duplicateGroups = $service->getDuplicateControlNumbersSummary();
+        $duplicateCount = $duplicateGroups->count();
+
         $query = Payment::with(['application.applicant.user', 'application.programme'])->latest();
+
+        if ($request->get('view') === 'duplicates') {
+            $duplicateControlNumbers = $duplicateGroups->pluck('control_number')->all();
+            $query->whereIn('control_number', $duplicateControlNumbers);
+        }
 
         if ($request->filled('status')) {
             $query->where('payment_status', $request->status);
@@ -575,8 +584,8 @@ class AdminWebController extends Controller
         }
 
         $payments = $query->paginate(15);
-        $filters = $request->only(['search', 'status']);
-        return view('admin.payments.index', compact('payments', 'filters'));
+        $filters = $request->only(['search', 'status', 'view']);
+        return view('admin.payments.index', compact('payments', 'filters', 'duplicateGroups', 'duplicateCount'));
     }
 
     public function verifyPayment(Request $request, Payment $payment)
@@ -619,6 +628,53 @@ class AdminWebController extends Controller
         }
 
         return redirect()->back()->with('success', $msg);
+    }
+
+    public function regenerateControlNumber(Request $request, Payment $payment)
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Only Superadmin has authorization to refresh or regenerate control numbers.');
+
+        $validated = $request->validate([
+            'custom_control_number' => ['nullable', 'string', 'max:50'],
+            'reason' => ['nullable', 'string', 'max:255'],
+            'force' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $service = app(\App\Services\PaymentVerificationService::class);
+            $oldCn = $payment->control_number;
+            $updatedPayment = $service->regenerateControlNumber(
+                $payment,
+                auth()->user(),
+                $validated['custom_control_number'] ?? null,
+                $validated['reason'] ?? null,
+                (bool) ($validated['force'] ?? false)
+            );
+
+            $applicantName = $updatedPayment->application?->applicant?->user?->name ?? 'Applicant';
+            $msg = "Control number successfully updated from '{$oldCn}' to '{$updatedPayment->control_number}' for {$applicantName}.";
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $msg,
+                    'payment' => $updatedPayment,
+                    'old_control_number' => $oldCn,
+                    'new_control_number' => $updatedPayment->control_number,
+                ]);
+            }
+
+            return redirect()->back()->with('success', $msg);
+        } catch (\Throwable $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     public function programmes()

@@ -176,9 +176,9 @@ class ApplicationWorkflowService
 
         if (! $this->singidaClient->isConfigured()) {
             // Local/dev fallback when Singida is not configured.
-            if (! filled($payment->control_number) || str_starts_with((string) $payment->control_number, 'PENDING-')) {
+            if (! filled($payment->control_number) || str_starts_with((string) $payment->control_number, 'PENDING-') || $force) {
                 $payment->update([
-                    'control_number' => '99100'.date('Y').str_pad((string) $application->id, 6, '0', STR_PAD_LEFT),
+                    'control_number' => self::generateUniqueControlNumber(),
                     'singida_synced' => false,
                 ]);
             }
@@ -466,6 +466,48 @@ class ApplicationWorkflowService
                 return $candidate;
             }
             $nextSeq++;
+        }
+    }
+
+    /**
+     * Generate a guaranteed unique, collision-free control number formatted as 12-digit 99100YYXXXXX.
+     */
+    public static function generateUniqueControlNumber(?int $year = null): string
+    {
+        $year = $year ?: (int) date('Y');
+        $shortYear = substr((string) $year, -2);
+        $prefix = "99100{$shortYear}";
+
+        $maxSeq = 0;
+        $existing = Payment::query()
+            ->where('control_number', 'like', "{$prefix}%")
+            ->pluck('control_number');
+
+        foreach ($existing as $cn) {
+            if (preg_match('/^99100\d{2}(\d{5})$/', (string) $cn, $m)) {
+                $val = (int) $m[1];
+                if ($val > $maxSeq) {
+                    $maxSeq = $val;
+                }
+            }
+        }
+
+        $nextSeq = max($maxSeq + 1, 10001);
+
+        while (true) {
+            $candidate = $prefix . str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
+            if (! Payment::where('control_number', $candidate)->exists()) {
+                return $candidate;
+            }
+            $nextSeq++;
+
+            // Fallback to random 7 digits if sequential 5 digits exhausted
+            if ($nextSeq > 99999) {
+                do {
+                    $candidate = '99100' . random_int(1000000, 9999999);
+                } while (Payment::where('control_number', $candidate)->exists());
+                return $candidate;
+            }
         }
     }
 }

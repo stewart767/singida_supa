@@ -170,6 +170,10 @@
                                 <a href="{{ route('admin.payments.index') }}?view=control_numbers&status=pending" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('view') === 'control_numbers' && request()->get('status') === 'pending' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
                                     Pending / Unpaid
                                 </a>
+                                <a href="{{ route('admin.payments.index') }}?view=duplicates" class="flex items-center justify-between px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.payments.index') && request()->get('view') === 'duplicates' ? 'bg-amber-600 text-white shadow-sm' : 'hover:bg-amber-50 text-amber-800 hover:text-amber-900' }}">
+                                    <span>Duplicate Detector</span>
+                                    <span class="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-800">Audit</span>
+                                </a>
                             </div>
                         </div>
                         @endif

@@ -25,4 +25,14 @@ class PaymentPolicy
     {
         return $user->isSuperAdmin();
     }
+
+    public function regenerate(User $user, Payment $payment): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
+    public function viewDuplicates(User $user): bool
+    {
+        return $user->isSuperAdmin() || $user->hasPermissionTo('verify_payments');
+    }
 }
