@@ -55,6 +55,9 @@ class AdminWebController extends Controller
 
         $stats = [
             'total' => Application::count(),
+            'paid' => Application::whereHas('payment', function ($q) {
+                $q->where('payment_status', 'paid');
+            })->count(),
             'approved' => Application::where('status', 'Approved')->count(),
             'pending' => Application::whereIn('status', ['Pending Payment', 'Under Review', 'Submitted'])->count(),
             'rejected' => Application::where('status', 'Rejected')->count(),

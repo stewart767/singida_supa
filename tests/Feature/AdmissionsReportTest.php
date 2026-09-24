@@ -233,6 +233,76 @@ class AdmissionsReportTest extends TestCase
         $response->assertStatus(200);
         $this->assertStringContainsString('APP-CSV-TARGET', $response->getContent());
     }
+
+    public function test_admin_can_filter_applications_by_paid_status()
+    {
+        $adminUser = User::where('email', 'admin@supa.ac.tz')->first();
+        $this->actingAs($adminUser);
+
+        $programme = Programme::first();
+        $academicYear = AcademicYear::first();
+        $intake = Intake::first();
+        $applicant = Applicant::first();
+
+        // 1. Paid Application
+        $paidApp = Application::create([
+            'application_number' => 'APP-PAID-001',
+            'applicant_id' => $applicant->id,
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'status' => 'Under Review',
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+        ]);
+        Payment::create([
+            'application_id' => $paidApp->id,
+            'control_number' => '991234567801',
+            'amount' => 10000,
+            'currency' => 'TZS',
+            'payment_status' => 'paid',
+            'transaction_reference' => 'TXN-PAID-001',
+            'verified_at' => now(),
+        ]);
+
+        // 2. Unpaid / Pending Payment Application
+        $unpaidApp = Application::create([
+            'application_number' => 'APP-UNPAID-002',
+            'applicant_id' => $applicant->id,
+            'programme_id' => $programme->id,
+            'academic_year_id' => $academicYear->id,
+            'intake_id' => $intake->id,
+            'status' => 'Pending Payment',
+            'admission_type' => 'Diploma',
+            'admission_category' => 'Direct Entry',
+        ]);
+        Payment::create([
+            'application_id' => $unpaidApp->id,
+            'control_number' => '991234567802',
+            'amount' => 10000,
+            'currency' => 'TZS',
+            'payment_status' => 'pending',
+            'transaction_reference' => 'TXN-UNPAID-002',
+        ]);
+
+        // Filter by Paid status on web index
+        $webResponse = $this->get('/admin/applications?status=Paid');
+        $webResponse->assertStatus(200);
+        $webResponse->assertSee('APP-PAID-001');
+        $webResponse->assertDontSee('APP-UNPAID-002');
+
+        // Filter by Paid status on PDF report
+        $pdfResponse = $this->get('/admin/reports/pdf?type=applications&status=Paid');
+        $pdfResponse->assertStatus(200);
+        $pdfResponse->assertSee('APP-PAID-001');
+        $pdfResponse->assertDontSee('APP-UNPAID-002');
+
+        // Filter by Paid status on CSV export
+        $csvResponse = $this->get('/api/v1/admin/export-report?type=applications&status=Paid');
+        $csvResponse->assertStatus(200);
+        $this->assertStringContainsString('APP-PAID-001', $csvResponse->getContent());
+        $this->assertStringNotContainsString('APP-UNPAID-002', $csvResponse->getContent());
+    }
 }
 
 

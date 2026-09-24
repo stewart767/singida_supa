@@ -79,30 +79,36 @@
     }">
 
         <!-- Stat Metric Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <a href="{{ route('admin.applications.index') }}" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect block {{ empty($filters['status']) ? 'ring-2 ring-blue-500' : '' }}">
                 <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">Total Applicants</span>
                 <span class="text-3xl font-black text-slate-900 block">{{ number_format($stats['total'] ?? 0) }}</span>
                 <span class="text-[11px] font-bold text-blue-500">All Submitted & Drafts</span>
-            </div>
+            </a>
 
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect">
+            <a href="{{ route('admin.applications.index', ['status' => 'Paid']) }}" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect block {{ ($filters['status'] ?? '') === 'Paid' ? 'ring-2 ring-emerald-500' : '' }}">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-600 block">Paid Students</span>
+                <span class="text-3xl font-black text-emerald-600 block">{{ number_format($stats['paid'] ?? 0) }}</span>
+                <span class="text-[11px] font-bold text-emerald-500">Payment Completed</span>
+            </a>
+
+            <a href="{{ route('admin.applications.index', ['status' => 'Approved']) }}" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect block {{ ($filters['status'] ?? '') === 'Approved' ? 'ring-2 ring-blue-600' : '' }}">
                 <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">Approved Udahili</span>
-                <span class="text-3xl font-black text-emerald-600 block">{{ number_format($stats['approved'] ?? 0) }}</span>
-                <span class="text-[11px] font-bold text-emerald-500">Admission Granted</span>
-            </div>
+                <span class="text-3xl font-black text-blue-600 block">{{ number_format($stats['approved'] ?? 0) }}</span>
+                <span class="text-[11px] font-bold text-blue-500">Admission Granted</span>
+            </a>
 
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect">
+            <a href="{{ route('admin.applications.index', ['status' => 'Pending']) }}" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect block {{ ($filters['status'] ?? '') === 'Pending' ? 'ring-2 ring-amber-500' : '' }}">
                 <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">Pending Review</span>
                 <span class="text-3xl font-black text-amber-500 block">{{ number_format($stats['pending'] ?? 0) }}</span>
                 <span class="text-[11px] font-bold text-amber-500">Requires Decision</span>
-            </div>
+            </a>
 
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect">
+            <a href="{{ route('admin.applications.index', ['status' => 'Rejected']) }}" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-2 card-hover-effect block {{ ($filters['status'] ?? '') === 'Rejected' ? 'ring-2 ring-red-500' : '' }}">
                 <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">Rejected</span>
                 <span class="text-3xl font-black text-red-500 block">{{ number_format($stats['rejected'] ?? 0) }}</span>
                 <span class="text-[11px] font-bold text-red-400">Applications</span>
-            </div>
+            </a>
         </div>
         
         <!-- Search & Multi-Filter Bar -->
@@ -122,6 +128,7 @@
                     <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Status</label>
                     <select name="status" class="w-full px-4 py-2.5 rounded-2xl border border-slate-300 bg-slate-50 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500">
                         <option value="">All Statuses</option>
+                        <option value="Paid" {{ ($filters['status'] ?? '') === 'Paid' ? 'selected' : '' }}>Paid</option>
                         <option value="Draft" {{ ($filters['status'] ?? '') === 'Draft' ? 'selected' : '' }}>Draft</option>
                         <option value="Pending Payment" {{ ($filters['status'] ?? '') === 'Pending Payment' ? 'selected' : '' }}>Pending Payment</option>
                         <option value="Under Review" {{ ($filters['status'] ?? '') === 'Under Review' ? 'selected' : '' }}>Under Review</option>

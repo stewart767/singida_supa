@@ -34,10 +34,15 @@ class ApplicationRepository implements ApplicationRepositoryInterface
         }
 
         if (!empty($filters['status'])) {
-            if ($filters['status'] === 'Pending') {
+            $status = $filters['status'];
+            if (strtolower($status) === 'paid') {
+                $query->whereHas('payment', function ($q) {
+                    $q->where('payment_status', 'paid');
+                });
+            } elseif ($status === 'Pending') {
                 $query->whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist']);
             } else {
-                $query->where('status', $filters['status']);
+                $query->where('status', $status);
             }
         }
 

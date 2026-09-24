@@ -34,7 +34,7 @@ class ReportExporterService
     public function getFilteredReportQuery(string $type, array $filters = [])
     {
         if ($type === 'applications' || $type === 'admitted') {
-            $query = Application::with(['applicant.user', 'programme']);
+            $query = Application::with(['applicant.user', 'programme', 'payment']);
 
             if ($type === 'admitted') {
                 $query->where('status', 'Approved');
@@ -109,7 +109,11 @@ class ReportExporterService
             // Apply Status Filter
             if (!empty($filters['status'])) {
                 $status = $filters['status'];
-                if ($status === 'pending' || $status === 'Pending') {
+                if (strtolower($status) === 'paid') {
+                    $query->whereHas('payment', function ($q) {
+                        $q->where('payment_status', 'paid');
+                    });
+                } elseif ($status === 'pending' || $status === 'Pending') {
                     $query->whereIn('status', ['Pending Payment', 'Under Review', 'Submitted', 'Verified', 'Waitlist']);
                 } elseif ($status === 'active' || $status === 'approved' || $status === 'Approved') {
                     $query->where('status', 'Approved');

@@ -113,6 +113,9 @@
                                 <a href="{{ route('admin.applications.index') }}" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->routeIs('admin.applications.index') && empty(request()->get('status')) ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
                                     All Admissions
                                 </a>
+                                <a href="{{ route('admin.applications.index') }}?status=Paid" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->get('status') === 'Paid' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
+                                    Paid Admissions
+                                </a>
                                 <a href="{{ route('admin.applications.index') }}?status=Approved" class="flex items-center px-4 py-2 rounded-lg text-[11px] font-bold transition-all {{ request()->get('status') === 'Approved' ? 'bg-blue-800 text-white shadow-sm' : 'hover:bg-blue-50 text-slate-600 hover:text-blue-800' }}">
                                     Active Admissions
                                 </a>
